@@ -32,7 +32,7 @@ function checkAdminStatus() {
     const isUnlocked = hasPassword ? (result.adminUnlocked === true) : true;
     
     // Show/hide add buttons
-    const addButtons = ['addLinkBtn', 'addNoteBtn'];
+    const addButtons = ['addLinkBtn', 'addNoteBtn', 'addTrackerBtn'];
     addButtons.forEach(btnId => {
       const btn = document.getElementById(btnId);
       if (btn) {
@@ -340,6 +340,7 @@ async function loadTodoistTasks() {
       }
       
       const allTasks = await response.json();
+      
       // Filter for today's tasks (only incomplete tasks with due dates)
       const todayTasks = allTasks.filter(task => {
         if (task.is_completed) return false; // Skip completed tasks
@@ -399,6 +400,12 @@ function createTodoistTaskElement(task) {
     div.classList.add('completed');
   }
   
+  // Use the URL provided by Todoist API (it's already in the correct format)
+  // The API returns: https://app.todoist.com/app/task/{id}
+  // Also create app URL scheme for desktop app: todoist://task?id={id}
+  const todoistWebUrl = task.url || `https://app.todoist.com/app/task/${task.id}`;
+  const todoistAppUrl = `todoist://task?id=${task.id}`;
+  
   div.innerHTML = `
     <div class="todoist-task-content">
       <div class="todoist-task-checkbox ${task.is_completed ? 'checked' : ''}" data-task-id="${task.id}">
@@ -412,9 +419,32 @@ function createTodoistTaskElement(task) {
     </div>
   `;
   
+  // Make the task item clickable to open in Todoist (but not the checkbox)
+  div.addEventListener('click', (e) => {
+    // Don't open if clicking the checkbox
+    if (e.target.closest('.todoist-task-checkbox')) {
+      return;
+    }
+    
+    // Try to open in Todoist desktop app first (if installed)
+    const appLink = document.createElement('a');
+    appLink.href = todoistAppUrl;
+    appLink.style.display = 'none';
+    document.body.appendChild(appLink);
+    appLink.click();
+    document.body.removeChild(appLink);
+    
+    // Fallback to web URL (opens in browser, or redirects to app if installed)
+    // Small delay to avoid opening both if app URL works
+    setTimeout(() => {
+      window.open(todoistWebUrl, '_blank');
+    }, 300);
+  });
+  
   // Add click handler to toggle completion (if API key allows)
   const checkbox = div.querySelector('.todoist-task-checkbox');
-  checkbox.addEventListener('click', () => {
+  checkbox.addEventListener('click', (e) => {
+    e.stopPropagation(); // Prevent triggering the div click handler
     toggleTodoistTask(task.id, !task.is_completed);
   });
   
@@ -665,6 +695,71 @@ function initializeModals() {
     });
   });
   
+  // Tracker Modal
+  const trackerModal = document.getElementById('trackerModal');
+  const addTrackerBtn = document.getElementById('addTrackerBtn');
+  const closeTrackerModal = document.getElementById('closeTrackerModal');
+  const trackerForm = document.getElementById('trackerForm');
+  
+  if (addTrackerBtn) {
+    addTrackerBtn.addEventListener('click', () => {
+      if (!window.isAdmin) {
+        alert('Only administrators can add trackers. Please unlock settings to add trackers.');
+        return;
+      }
+      openTrackerModal();
+    });
+  }
+  
+  if (closeTrackerModal) {
+    closeTrackerModal.addEventListener('click', () => {
+      trackerModal.classList.remove('active');
+    });
+  }
+  
+  if (trackerForm) {
+    trackerForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (!window.isAdmin) {
+        alert('Only administrators can add trackers.');
+        return;
+      }
+      saveTracker();
+    });
+  }
+  
+  // Populate date dropdowns for tracker modal
+  populateTrackerDateDropdowns();
+  
+  // Update day dropdown when month/year changes
+  const trackerMonth = document.getElementById('trackerMonth');
+  const trackerYear = document.getElementById('trackerYear');
+  if (trackerMonth) {
+    trackerMonth.addEventListener('change', updateTrackerDayDropdown);
+  }
+  if (trackerYear) {
+    trackerYear.addEventListener('change', updateTrackerDayDropdown);
+  }
+  
+  // Icon picker for tracker modal
+  const trackerIconPickerBtn = document.getElementById('trackerIconPickerBtn');
+  const trackerIconGrid = document.getElementById('trackerIconGrid');
+  if (trackerIconPickerBtn && trackerIconGrid) {
+    trackerIconPickerBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      trackerIconGrid.style.display = trackerIconGrid.style.display === 'none' ? 'grid' : 'none';
+    });
+    
+    trackerIconGrid.querySelectorAll('.icon-option').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const icon = btn.dataset.icon;
+        document.getElementById('trackerSelectedIcon').textContent = icon;
+        trackerIconGrid.style.display = 'none';
+      });
+    });
+  }
+  
   // Close modals when clicking outside
   window.addEventListener('click', (e) => {
     if (e.target.classList.contains('modal')) {
@@ -681,6 +776,122 @@ function initializeSettings() {
 }
 
 // Keyboard shortcuts
+// Tracker Modal Functions
+function openTrackerModal() {
+  const trackerModal = document.getElementById('trackerModal');
+  if (!trackerModal) return;
+  
+  // Reset form
+  const form = document.getElementById('trackerForm');
+  if (form) form.reset();
+  
+  // Set default values
+  document.getElementById('trackerType').value = 'countdown';
+  document.getElementById('trackerSelectedIcon').textContent = '⏰';
+  document.getElementById('trackerPinned').checked = true;
+  
+  // Set default date to today
+  const today = new Date();
+  document.getElementById('trackerMonth').value = today.getMonth();
+  document.getElementById('trackerYear').value = today.getFullYear();
+  updateTrackerDayDropdown();
+  document.getElementById('trackerDay').value = today.getDate();
+  
+  trackerModal.classList.add('active');
+  document.getElementById('trackerName').focus();
+}
+
+function populateTrackerDateDropdowns() {
+  const daySelect = document.getElementById('trackerDay');
+  const yearSelect = document.getElementById('trackerYear');
+  
+  if (!daySelect || !yearSelect) return;
+  
+  // Populate days (will be updated based on month/year)
+  for (let i = 1; i <= 31; i++) {
+    const option = document.createElement('option');
+    option.value = i;
+    option.textContent = i;
+    daySelect.appendChild(option);
+  }
+  
+  // Populate years (current year ± 50)
+  const currentYear = new Date().getFullYear();
+  for (let i = currentYear - 50; i <= currentYear + 50; i++) {
+    const option = document.createElement('option');
+    option.value = i;
+    option.textContent = i;
+    yearSelect.appendChild(option);
+  }
+}
+
+function updateTrackerDayDropdown() {
+  const month = parseInt(document.getElementById('trackerMonth').value);
+  const year = parseInt(document.getElementById('trackerYear').value);
+  const daySelect = document.getElementById('trackerDay');
+  
+  if (isNaN(month) || isNaN(year) || !daySelect) {
+    return;
+  }
+  
+  // Get days in month
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const currentValue = parseInt(daySelect.value) || 1;
+  
+  // Clear and repopulate
+  daySelect.innerHTML = '<option value="">Day</option>';
+  for (let i = 1; i <= daysInMonth; i++) {
+    const option = document.createElement('option');
+    option.value = i;
+    option.textContent = i;
+    if (i === currentValue && i <= daysInMonth) {
+      option.selected = true;
+    }
+    daySelect.appendChild(option);
+  }
+}
+
+function saveTracker() {
+  const name = document.getElementById('trackerName').value.trim();
+  const type = document.getElementById('trackerType').value;
+  const month = parseInt(document.getElementById('trackerMonth').value);
+  const day = parseInt(document.getElementById('trackerDay').value);
+  const year = parseInt(document.getElementById('trackerYear').value);
+  const time = document.getElementById('trackerTime').value;
+  const icon = document.getElementById('trackerSelectedIcon').textContent;
+  const pinned = document.getElementById('trackerPinned').checked;
+  
+  if (!name || isNaN(month) || isNaN(day) || isNaN(year)) {
+    alert('Please fill in all required fields');
+    return;
+  }
+  
+  // Create date from inputs
+  const [hours, minutes] = time.split(':').map(Number);
+  const targetDate = new Date(year, month, day, hours || 0, minutes || 0);
+  
+  chrome.storage.sync.get(['countdowns'], (result) => {
+    const countdowns = result.countdowns || [];
+    
+    const trackerData = {
+      id: Date.now().toString(),
+      name,
+      type,
+      date: targetDate.toISOString(),
+      icon,
+      pinnedToDashboard: pinned
+    };
+    
+    countdowns.push(trackerData);
+    
+    chrome.storage.sync.set({ countdowns }, () => {
+      loadTrackers();
+      document.getElementById('trackerModal').classList.remove('active');
+      document.getElementById('trackerForm').reset();
+    });
+  });
+}
+
 function initializeKeyboardShortcuts() {
   document.addEventListener('keydown', (e) => {
     // Ctrl/Cmd + K: Open settings
@@ -706,6 +917,11 @@ function initializeKeyboardShortcuts() {
       // 'n' key: Add note
       if (e.key === 'n' && !e.ctrlKey && !e.metaKey) {
         document.getElementById('addNoteBtn').click();
+      }
+      // 't' key: Add tracker
+      if (e.key === 't' && !e.ctrlKey && !e.metaKey) {
+        const addTrackerBtn = document.getElementById('addTrackerBtn');
+        if (addTrackerBtn) addTrackerBtn.click();
       }
     }
   });

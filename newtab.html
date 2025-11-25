@@ -39,6 +39,7 @@
           <section class="card trackers-card" id="trackersCard">
             <div class="card-header">
               <h2 class="card-title">Trackers</h2>
+              <button class="add-btn" id="addTrackerBtn" aria-label="Add tracker (Press T)">+ Add</button>
             </div>
             <div class="trackers-list" id="trackersList">
               <div class="tracker-placeholder">No trackers pinned to dashboard</div>
@@ -106,6 +107,76 @@
         <input type="text" id="noteTitle" placeholder="Note title" required>
         <textarea id="noteContent" placeholder="Note content" required></textarea>
         <button type="submit" class="submit-btn">Add Note</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="trackerModal">
+    <div class="modal-content">
+      <span class="close" id="closeTrackerModal">&times;</span>
+      <h2>Add Tracker</h2>
+      <form id="trackerForm">
+        <input type="text" id="trackerName" placeholder="Event name" required>
+        
+        <select id="trackerType" required>
+          <option value="countdown">Countdown</option>
+          <option value="countup">Count Up</option>
+        </select>
+        
+        <div class="date-inputs">
+          <select id="trackerMonth" required>
+            <option value="">Month</option>
+            <option value="0">Jan</option>
+            <option value="1">Feb</option>
+            <option value="2">Mar</option>
+            <option value="3">Apr</option>
+            <option value="4">May</option>
+            <option value="5">Jun</option>
+            <option value="6">Jul</option>
+            <option value="7">Aug</option>
+            <option value="8">Sep</option>
+            <option value="9">Oct</option>
+            <option value="10">Nov</option>
+            <option value="11">Dec</option>
+          </select>
+          <select id="trackerDay" required>
+            <option value="">Day</option>
+          </select>
+          <select id="trackerYear" required>
+            <option value="">Year</option>
+          </select>
+        </div>
+        
+        <input type="time" id="trackerTime" value="00:00">
+        
+        <div class="icon-selector">
+          <button type="button" class="icon-picker-btn" id="trackerIconPickerBtn">
+            <span id="trackerSelectedIcon">⏰</span>
+            <span class="icon-arrow">▼</span>
+          </button>
+          <div class="icon-grid" id="trackerIconGrid" style="display: none;">
+            <button type="button" class="icon-option" data-icon="⏰">⏰</button>
+            <button type="button" class="icon-option" data-icon="🎉">🎉</button>
+            <button type="button" class="icon-option" data-icon="🎂">🎂</button>
+            <button type="button" class="icon-option" data-icon="🎄">🎄</button>
+            <button type="button" class="icon-option" data-icon="🎁">🎁</button>
+            <button type="button" class="icon-option" data-icon="📅">📅</button>
+            <button type="button" class="icon-option" data-icon="🚀">🚀</button>
+            <button type="button" class="icon-option" data-icon="⭐">⭐</button>
+            <button type="button" class="icon-option" data-icon="💼">💼</button>
+            <button type="button" class="icon-option" data-icon="🏆">🏆</button>
+            <button type="button" class="icon-option" data-icon="🎯">🎯</button>
+            <button type="button" class="icon-option" data-icon="📌">📌</button>
+          </div>
+        </div>
+        
+        <label class="toggle-label">
+          <span>Pin to Dashboard</span>
+          <input type="checkbox" id="trackerPinned" checked>
+          <span class="toggle-switch"></span>
+        </label>
+        
+        <button type="submit" class="submit-btn">Add Tracker</button>
       </form>
     </div>
   </div>
