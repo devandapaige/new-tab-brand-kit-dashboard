@@ -7,7 +7,6 @@ document.addEventListener('DOMContentLoaded', () => {
   initializeFormHandlers();
   initializeAdminSection();
   initializeCountdowns();
-  populateDateDropdowns();
 });
 
 // Load brand colors and apply to settings page
@@ -796,6 +795,8 @@ function populateDateDropdowns() {
   const daySelect = document.getElementById('countdownDay');
   const yearSelect = document.getElementById('countdownYear');
   
+  if (!daySelect || !yearSelect) return; // Exit if elements don't exist yet
+  
   // Populate days (will be updated based on month/year)
   for (let i = 1; i <= 31; i++) {
     const option = document.createElement('option');
@@ -1188,5 +1189,6 @@ function deleteCountdown(index) {
     });
   });
 }
+
 
 
