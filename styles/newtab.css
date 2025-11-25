@@ -364,7 +364,7 @@ body {
 /* Links */
 .links-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 1rem;
 }
 
@@ -524,7 +524,7 @@ body {
   border: 2px solid var(--border-color);
   border-radius: 8px;
   font-size: 1rem;
-  color: var(--text-primary);
+  color: #1e293b;
   background: white;
   font-family: inherit;
 }
@@ -563,7 +563,7 @@ body {
   border: 2px solid var(--border-color);
   border-radius: 8px;
   font-size: 1rem;
-  color: var(--text-primary);
+  color: #1e293b;
   background: white;
   font-family: inherit;
   cursor: pointer;

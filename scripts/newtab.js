@@ -516,7 +516,8 @@ function createLinkElement(link, index) {
   a.target = '_blank';
   a.rel = 'noopener noreferrer';
   
-  const icon = getFavicon(link.url);
+  // Use emoji icon if provided, otherwise use first letter of link name
+  const icon = link.icon || (link.name ? link.name.charAt(0).toUpperCase() : '🔗');
   
   a.innerHTML = `
     <div class="link-icon">${icon}</div>
@@ -533,15 +534,6 @@ function createLinkElement(link, index) {
   }
   
   return a;
-}
-
-function getFavicon(url) {
-  try {
-    const domain = new URL(url).hostname;
-    return domain.charAt(0).toUpperCase();
-  } catch {
-    return '🔗';
-  }
 }
 
 function deleteLink(index) {
@@ -639,6 +631,7 @@ function initializeModals() {
     
     const name = document.getElementById('linkName').value;
     let url = document.getElementById('linkUrl').value;
+    const icon = document.getElementById('linkIcon').value.trim();
     
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       url = 'https://' + url;
@@ -646,7 +639,12 @@ function initializeModals() {
     
     chrome.storage.sync.get(['links'], (result) => {
       const links = result.links || [];
-      links.push({ name, url });
+      // Store icon only if provided, otherwise it will default to first letter of name
+      const linkData = { name, url };
+      if (icon) {
+        linkData.icon = icon;
+      }
+      links.push(linkData);
       chrome.storage.sync.set({ links }, () => {
         loadLinks();
         linkModal.classList.remove('active');

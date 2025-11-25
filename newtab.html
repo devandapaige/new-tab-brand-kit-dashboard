@@ -94,6 +94,11 @@
       <form id="linkForm">
         <input type="text" id="linkName" placeholder="Link name" required>
         <input type="url" id="linkUrl" placeholder="https://example.com" required>
+        <div>
+          <label for="linkIcon" style="display: block; margin-bottom: 0.5rem; color: var(--text-primary); font-weight: 500;">Icon (Optional - emoji or leave empty for first letter)</label>
+          <input type="text" id="linkIcon" placeholder="🔗 or leave empty" maxlength="2">
+          <small style="display: block; margin-top: 0.25rem; color: var(--text-secondary); font-size: 0.875rem;">Enter an emoji or leave empty to use the first letter of the link name</small>
+        </div>
         <button type="submit" class="submit-btn">Add Link</button>
       </form>
     </div>
