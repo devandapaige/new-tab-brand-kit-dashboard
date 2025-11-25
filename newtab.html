@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="script-src 'self'; object-src 'self';">
+  <title>Brand Kit Dashboard</title>
+  <link rel="stylesheet" href="styles/newtab.css">
+</head>
+<body>
+  <div class="dashboard-container">
+    <!-- Background Image -->
+    <div class="background-image" id="backgroundImage"></div>
+    
+    <!-- Overlay for better text readability -->
+    <div class="overlay"></div>
+    
+    <!-- Main Content -->
+    <div class="content-wrapper">
+      <!-- Header Section -->
+      <header class="header-section">
+        <div class="greeting" id="greeting">
+          <span id="greetingText">Good morning</span>, <span id="userName">Team</span>.
+        </div>
+        <div class="date-time" id="dateTime"></div>
+        <button class="settings-btn" id="settingsBtn" title="Settings (Ctrl/Cmd+K)" aria-label="Open settings">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"></path>
+          </svg>
+        </button>
+      </header>
+
+      <!-- Main Dashboard Grid -->
+      <div class="dashboard-grid">
+        <!-- Left Column -->
+        <div class="column-left">
+          <!-- Notes Section -->
+          <section class="card notes-card">
+            <div class="card-header">
+              <h2 class="card-title">Notes</h2>
+              <button class="add-btn" id="addNoteBtn" aria-label="Add note (Press N)">+ Add</button>
+            </div>
+            <div class="notes-list" id="notesList"></div>
+          </section>
+        </div>
+
+        <!-- Center Column -->
+        <div class="column-center">
+          <!-- Favorite Links -->
+          <section class="card links-card">
+            <div class="card-header">
+              <h2 class="card-title">Quick Links</h2>
+              <button class="add-btn" id="addLinkBtn" aria-label="Add link (Press L)">+ Add</button>
+            </div>
+            <div class="links-grid" id="linksGrid"></div>
+          </section>
+
+        </div>
+
+        <!-- Right Column -->
+        <div class="column-right">
+          <!-- Todoist Today -->
+          <section class="card todoist-card">
+            <div class="card-header">
+              <h2 class="card-title">Todoist Today</h2>
+              <button class="refresh-btn" id="refreshTodoistBtn" aria-label="Refresh Todoist" title="Refresh tasks">↻</button>
+            </div>
+            <div class="todoist-content" id="todoistContent">
+              <div class="todoist-loading">Configure Todoist API in settings</div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modals -->
+  <div class="modal" id="linkModal">
+    <div class="modal-content">
+      <span class="close" id="closeLinkModal">&times;</span>
+      <h2>Add Link</h2>
+      <form id="linkForm">
+        <input type="text" id="linkName" placeholder="Link name" required>
+        <input type="url" id="linkUrl" placeholder="https://example.com" required>
+        <button type="submit" class="submit-btn">Add Link</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="noteModal">
+    <div class="modal-content">
+      <span class="close" id="closeNoteModal">&times;</span>
+      <h2>Add Note</h2>
+      <form id="noteForm">
+        <input type="text" id="noteTitle" placeholder="Note title" required>
+        <textarea id="noteContent" placeholder="Note content" required></textarea>
+        <button type="submit" class="submit-btn">Add Note</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="scripts/newtab.js"></script>
+</body>
+</html>
+

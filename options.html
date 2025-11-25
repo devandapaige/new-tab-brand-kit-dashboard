@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="script-src 'self'; object-src 'self';">
+  <title>Brand Kit Dashboard - Settings</title>
+  <link rel="stylesheet" href="styles/options.css">
+</head>
+<body>
+  <div class="settings-container">
+    <header class="settings-header">
+      <h1>Brand Kit Dashboard Settings</h1>
+      <p>Customize your dashboard to match your brand colors and preferences</p>
+    </header>
+
+    <div class="settings-content">
+      <!-- Admin Lock Section -->
+      <section class="settings-section admin-lock-section">
+        <div class="admin-lock-header">
+          <h2>🔒 Admin Access</h2>
+          <div class="admin-status" id="adminStatus">
+            <span id="adminStatusText">Settings are locked</span>
+            <button id="lockUnlockBtn" class="lock-unlock-btn">Unlock Settings</button>
+          </div>
+        </div>
+        
+        <!-- Admin Password Setup (shown when no password set) -->
+        <div id="adminPasswordSetup" class="admin-password-setup" style="display: none;">
+          <p class="section-description">Set an admin password to protect all settings. Staff members can view settings but cannot make changes.</p>
+          <div class="input-group">
+            <label for="adminPasswordInput">Admin Password</label>
+            <input type="password" id="adminPasswordInput" class="admin-password-input" placeholder="Enter password to protect settings">
+            <small>Leave empty to allow changes without password protection</small>
+            <div class="button-group-inline" style="margin-top: 1rem;">
+              <button id="setPasswordBtn" class="save-settings-btn" style="flex: 1;">Set Password</button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Admin Unlock (shown when password is set) -->
+        <div id="adminUnlockForm" class="admin-unlock-form" style="display: none;">
+          <p class="section-description">Enter admin password to unlock settings and make changes.</p>
+          <div class="input-group">
+            <label for="adminUnlockPassword">Admin Password</label>
+            <input type="password" id="adminUnlockPassword" class="admin-password-input" placeholder="Enter admin password">
+            <div class="button-group-inline" style="margin-top: 1rem;">
+              <button id="unlockAdminBtn" class="unlock-btn" style="flex: 1;">Unlock Settings</button>
+              <button id="lockAdminBtn" class="lock-btn" style="display: none;">Lock Settings</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Brand Colors Section -->
+      <section class="settings-section locked">
+        <h2>Brand Colors</h2>
+        <p class="section-description">Set your brand colors to customize the dashboard appearance</p>
+        
+        <div class="color-group">
+          <div class="color-input-wrapper">
+            <label for="primaryColor">Primary Color</label>
+            <div class="color-picker-wrapper">
+              <input type="color" id="primaryColor" value="#4A90E2">
+              <input type="text" id="primaryColorText" value="#4A90E2" class="color-text-input">
+            </div>
+          </div>
+          
+          <div class="color-input-wrapper">
+            <label for="secondaryColor">Secondary Color</label>
+            <div class="color-picker-wrapper">
+              <input type="color" id="secondaryColor" value="#50C878">
+              <input type="text" id="secondaryColorText" value="#50C878" class="color-text-input">
+            </div>
+          </div>
+          
+          <div class="color-input-wrapper">
+            <label for="accentColor">Accent Color</label>
+            <div class="color-picker-wrapper">
+              <input type="color" id="accentColor" value="#FF6B6B">
+              <input type="text" id="accentColorText" value="#FF6B6B" class="color-text-input">
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Background Section -->
+      <section class="settings-section locked">
+        <h2>Background</h2>
+        <p class="section-description">Customize the background image and overlay</p>
+        
+        <div class="input-group">
+          <label for="backgroundImage">Background Image URL</label>
+          <input type="url" id="backgroundImage" placeholder="https://example.com/image.jpg">
+          <small>Enter a URL to a background image, or leave empty for default</small>
+        </div>
+        
+        <div class="input-group">
+          <label for="backgroundColor">Background Overlay Color</label>
+          <div class="color-picker-wrapper">
+            <input type="color" id="backgroundColor" value="#0F172A">
+            <input type="text" id="backgroundColorText" value="rgba(15, 23, 42, 0.85)" class="color-text-input">
+          </div>
+          <small>This color overlays the background image for better text readability</small>
+        </div>
+      </section>
+
+      <!-- Card Appearance Section -->
+      <section class="settings-section locked">
+        <h2>Card Appearance</h2>
+        <p class="section-description">Customize card colors and text</p>
+        
+        <div class="input-group">
+          <label for="cardBackground">Card Background Color</label>
+          <div class="color-picker-wrapper">
+            <input type="color" id="cardBackground" value="#FFFFFF">
+            <input type="text" id="cardBackgroundText" value="rgba(255, 255, 255, 0.95)" class="color-text-input">
+          </div>
+        </div>
+        
+        <div class="input-group">
+          <label for="textPrimary">Primary Text Color</label>
+          <div class="color-picker-wrapper">
+            <input type="color" id="textPrimary" value="#1E293B">
+            <input type="text" id="textPrimaryText" value="#1E293B" class="color-text-input">
+          </div>
+        </div>
+        
+        <div class="input-group">
+          <label for="textSecondary">Secondary Text Color</label>
+          <div class="color-picker-wrapper">
+            <input type="color" id="textSecondary" value="#64748B">
+            <input type="text" id="textSecondaryText" value="#64748B" class="color-text-input">
+          </div>
+        </div>
+      </section>
+
+      <!-- General Settings -->
+      <section class="settings-section locked">
+        <h2>General Settings</h2>
+        
+        <div class="input-group">
+          <label for="userName">Team/User Name</label>
+          <input type="text" id="userName" placeholder="Team">
+          <small>This name appears in the greeting</small>
+        </div>
+      </section>
+
+      <!-- Todoist Settings -->
+      <section class="settings-section locked">
+        <h2>Todoist Integration</h2>
+        <p class="section-description">Connect your Todoist account to display today's tasks on your dashboard</p>
+        
+        <div class="input-group">
+          <label for="todoistApiKey">Todoist API Token</label>
+          <input type="text" id="todoistApiKey" placeholder="Your Todoist API token">
+          <small>
+            Get your API token from 
+            <a href="https://todoist.com/app/settings/integrations" target="_blank">Todoist Settings → Integrations</a>
+          </small>
+        </div>
+      </section>
+
+
+      <!-- Quick Responses Admin Section -->
+      <section class="settings-section" id="quickResponsesSection">
+        <h2>Quick Responses</h2>
+        <p class="section-description">Manage text templates that appear in the extension popup. Users can click to copy them to clipboard.</p>
+        
+        <div class="locked-message" id="quickResponsesLocked">
+          <p>🔒 Unlock settings above to manage quick responses.</p>
+        </div>
+        
+        <div id="responsesManagement" class="responses-management" style="display: none;">
+          <div class="responses-header">
+            <h3>Manage Quick Responses</h3>
+            <button id="addResponseBtn" class="add-response-btn">+ Add Response</button>
+          </div>
+          
+          <div id="responsesList" class="admin-responses-list">
+            <!-- Responses will be loaded here -->
+          </div>
+        </div>
+      </section>
+
+      <!-- Export/Import Section -->
+      <section class="settings-section locked">
+        <h2>Export & Import Settings</h2>
+        <p class="section-description">Backup your settings or share them with your team</p>
+        
+        <div class="input-group">
+          <div class="button-group-inline">
+            <button id="exportBtn" class="export-btn">Export Settings</button>
+            <button id="importBtn" class="import-btn">Import Settings</button>
+          </div>
+          <small>Export creates a JSON file you can share. Import loads settings from a JSON file.</small>
+          <input type="file" id="importFile" accept=".json" style="display: none;">
+        </div>
+      </section>
+
+      <!-- Actions -->
+      <div class="settings-actions">
+        <button id="saveBtn" class="save-settings-btn">Save Settings</button>
+        <button id="resetBtn" class="reset-btn">Reset to Defaults</button>
+        <button id="previewBtn" class="preview-btn">Preview Dashboard</button>
+        <button id="openDashboardBtn" class="open-dashboard-btn" style="display: none;">Open Dashboard</button>
+      </div>
+
+      <div id="statusMessage" class="status-message"></div>
+    </div>
+  </div>
+
+  <script src="scripts/options.js"></script>
+</body>
+</html>
+

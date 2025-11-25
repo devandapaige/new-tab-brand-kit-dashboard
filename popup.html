@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="script-src 'self'; object-src 'self';">
+  <title>Quick Responses</title>
+  <link rel="stylesheet" href="styles/popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <header class="popup-header">
+      <h2>Quick Responses</h2>
+      <button class="admin-btn" id="adminBtn" title="Admin Settings" aria-label="Admin settings">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+        </svg>
+      </button>
+    </header>
+    
+    <div class="popup-content" id="popupContent">
+      <div class="search-wrapper">
+        <input type="text" id="searchInput" placeholder="Search responses..." class="search-input" aria-label="Search responses">
+      </div>
+      
+      <div class="responses-list" id="responsesList">
+        <div class="loading">Loading responses...</div>
+      </div>
+      
+      <div class="empty-state" id="emptyState" style="display: none;">
+        <p>No responses found</p>
+        <small>Ask your administrator to add quick responses</small>
+      </div>
+    </div>
+    
+    <div class="copy-feedback" id="copyFeedback">Copied!</div>
+  </div>
+  
+  <script src="scripts/popup.js"></script>
+</body>
+</html>
+
