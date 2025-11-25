@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initializeDateTime();
   initializeGreeting();
   checkAdminStatus();
+  loadTrackers();
   loadLinks();
   loadNotes();
   initializeTodoist();
@@ -161,6 +162,141 @@ function initializeGreeting() {
     greetingEl.textContent = 'Good evening';
   }
 }
+
+// Trackers
+function loadTrackers() {
+  chrome.storage.sync.get(['countdowns'], (result) => {
+    const countdowns = result.countdowns || [];
+    const pinnedTrackers = countdowns.filter(c => c.pinnedToDashboard !== false);
+    
+    const trackersList = document.getElementById('trackersList');
+    
+    if (pinnedTrackers.length === 0) {
+      trackersList.innerHTML = '<div class="tracker-placeholder">No trackers pinned to dashboard</div>';
+      return;
+    }
+    
+    trackersList.innerHTML = '';
+    
+    pinnedTrackers.forEach((tracker, index) => {
+      const trackerEl = createTrackerElement(tracker, index);
+      trackersList.appendChild(trackerEl);
+    });
+    
+    // Start updating all trackers
+    updateAllTrackers();
+  });
+  
+  // Listen for tracker changes
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === 'sync' && changes.countdowns) {
+      loadTrackers();
+    }
+  });
+}
+
+function createTrackerElement(tracker, index) {
+  const div = document.createElement('div');
+  div.className = 'tracker-item';
+  div.dataset.trackerId = tracker.id;
+  
+  const icon = tracker.icon || '⏰';
+  const name = tracker.name || 'Tracker';
+  const targetDate = new Date(tracker.date);
+  const isCountUp = tracker.type === 'countup';
+  
+  div.innerHTML = `
+    <div class="tracker-header">
+      <span class="tracker-icon">${icon}</span>
+      <span class="tracker-name">${name}</span>
+    </div>
+    <div class="tracker-display" data-target="${targetDate.getTime()}" data-type="${tracker.type}">
+      <div class="tracker-time">
+        <span class="tracker-value">--</span>
+      </div>
+    </div>
+  `;
+  
+  return div;
+}
+
+function updateAllTrackers() {
+  const trackerDisplays = document.querySelectorAll('.tracker-display');
+  const now = new Date().getTime();
+  
+  trackerDisplays.forEach(display => {
+    const targetTime = parseInt(display.dataset.target);
+    const isCountUp = display.dataset.type === 'countup';
+    const diff = isCountUp ? (now - targetTime) : (targetTime - now);
+    
+    if (diff < 0 && !isCountUp) {
+      // Countdown has passed
+      display.querySelector('.tracker-value').textContent = 'Time passed';
+      display.parentElement.classList.add('tracker-expired');
+      return;
+    }
+    
+    const time = calculateTimeDifference(Math.abs(diff));
+    const timeString = formatTimeString(time, isCountUp);
+    display.querySelector('.tracker-value').textContent = timeString;
+  });
+}
+
+function calculateTimeDifference(ms) {
+  const seconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+  const weeks = Math.floor(days / 7);
+  const months = Math.floor(days / 30);
+  const years = Math.floor(days / 365);
+  
+  return {
+    years,
+    months: months % 12,
+    weeks: weeks % 4,
+    days: days % 7,
+    hours: hours % 24,
+    minutes: minutes % 60,
+    seconds: seconds % 60,
+    totalDays: days,
+    totalHours: hours,
+    totalMinutes: minutes
+  };
+}
+
+function formatTimeString(time, isCountUp) {
+  const parts = [];
+  
+  if (time.years > 0) {
+    parts.push(`${time.years}y`);
+  }
+  if (time.months > 0) {
+    parts.push(`${time.months}mo`);
+  }
+  if (time.weeks > 0) {
+    parts.push(`${time.weeks}w`);
+  }
+  if (time.days > 0) {
+    parts.push(`${time.days}d`);
+  }
+  if (time.hours > 0 && parts.length < 3) {
+    parts.push(`${time.hours}h`);
+  }
+  if (time.minutes > 0 && parts.length < 3) {
+    parts.push(`${time.minutes}m`);
+  }
+  if (parts.length === 0 || (time.seconds > 0 && parts.length < 3)) {
+    parts.push(`${time.seconds}s`);
+  }
+  
+  return parts.slice(0, 3).join(' ');
+}
+
+// Update trackers every second
+setInterval(() => {
+  updateAllTrackers();
+}, 1000);
 
 // Todoist Integration
 function initializeTodoist() {

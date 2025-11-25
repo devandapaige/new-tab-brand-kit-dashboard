@@ -6,6 +6,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initializeColorPickers();
   initializeFormHandlers();
   initializeAdminSection();
+  initializeCountdowns();
+  populateDateDropdowns();
 });
 
 // Load brand colors and apply to settings page
@@ -39,7 +41,8 @@ function loadSettings() {
     'textSecondary',
     'backgroundImage',
     'userName',
-    'todoistApiKey'
+    'todoistApiKey',
+    'countdowns'
   ], (result) => {
     if (result.primaryColor) {
       document.getElementById('primaryColor').value = result.primaryColor;
@@ -342,6 +345,15 @@ function toggleSettingsLock(locked) {
   } else {
     document.getElementById('quickResponsesLocked').style.display = 'none';
     document.getElementById('responsesManagement').style.display = 'block';
+  }
+  
+  // Show/hide trackers management
+  if (locked) {
+    document.getElementById('trackersLocked').style.display = 'block';
+    document.getElementById('trackersManagement').style.display = 'none';
+  } else {
+    document.getElementById('trackersLocked').style.display = 'none';
+    document.getElementById('trackersManagement').style.display = 'block';
   }
   
   // Disable/enable all action buttons
@@ -762,4 +774,419 @@ function escapeHtml(text) {
   div.textContent = text;
   return div.innerHTML;
 }
+
+// Trackers Management
+function initializeCountdowns() {
+  loadTrackers();
+  
+  // Add tracker button
+  document.getElementById('addTrackerBtn').addEventListener('click', () => {
+    openCountdownModal();
+  });
+  
+  // Listen for admin unlock to show/hide trackers section
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === 'sync' && changes.adminUnlocked !== undefined) {
+      loadTrackers();
+    }
+  });
+}
+
+function populateDateDropdowns() {
+  const daySelect = document.getElementById('countdownDay');
+  const yearSelect = document.getElementById('countdownYear');
+  
+  // Populate days (will be updated based on month/year)
+  for (let i = 1; i <= 31; i++) {
+    const option = document.createElement('option');
+    option.value = i;
+    option.textContent = i;
+    daySelect.appendChild(option);
+  }
+  
+  // Populate years (current year ± 50)
+  const currentYear = new Date().getFullYear();
+  for (let i = currentYear - 50; i <= currentYear + 50; i++) {
+    const option = document.createElement('option');
+    option.value = i;
+    option.textContent = i;
+    yearSelect.appendChild(option);
+  }
+}
+
+function updateDayDropdown() {
+  const month = parseInt(document.getElementById('countdownMonth').value);
+  const year = parseInt(document.getElementById('countdownYear').value);
+  const daySelect = document.getElementById('countdownDay');
+  
+  if (isNaN(month) || isNaN(year)) {
+    return;
+  }
+  
+  // Get days in month
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const currentValue = parseInt(daySelect.value) || 1;
+  
+  // Clear and repopulate
+  daySelect.innerHTML = '<option value="">Day</option>';
+  for (let i = 1; i <= daysInMonth; i++) {
+    const option = document.createElement('option');
+    option.value = i;
+    option.textContent = i;
+    if (i === currentValue && i <= daysInMonth) {
+      option.selected = true;
+    }
+    daySelect.appendChild(option);
+  }
+}
+
+function loadTrackers() {
+  chrome.storage.sync.get(['countdowns', 'adminUnlocked'], (result) => {
+    const countdowns = result.countdowns || [];
+    const isUnlocked = result.adminUnlocked !== false; // Default to unlocked if no password
+    
+    const trackersSection = document.getElementById('trackersSection');
+    const trackersLocked = document.getElementById('trackersLocked');
+    const trackersManagement = document.getElementById('trackersManagement');
+    
+    if (isUnlocked) {
+      trackersLocked.style.display = 'none';
+      trackersManagement.style.display = 'block';
+      trackersSection.classList.remove('locked');
+    } else {
+      trackersLocked.style.display = 'block';
+      trackersManagement.style.display = 'none';
+      trackersSection.classList.add('locked');
+      return;
+    }
+    
+    displayTrackers(countdowns);
+  });
+}
+
+function displayTrackers(countdowns) {
+  const list = document.getElementById('trackersList');
+  list.innerHTML = '';
+  
+  if (countdowns.length === 0) {
+    list.innerHTML = '<p class="empty-state">No trackers yet. Click "Add Tracker" to create one.</p>';
+    return;
+  }
+  
+  countdowns.forEach((countdown, index) => {
+    const item = createCountdownItem(countdown, index);
+    list.appendChild(item);
+  });
+}
+
+function createCountdownItem(countdown, index) {
+  const div = document.createElement('div');
+  div.className = 'admin-response-item';
+  div.setAttribute('data-index', index);
+  
+  const targetDate = new Date(countdown.date);
+  const dateStr = targetDate.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
+  });
+  
+  div.innerHTML = `
+    <div class="response-item-header">
+      <div class="response-item-title">
+        <span style="font-size: 1.25rem; margin-right: 0.5rem;">${countdown.icon || '⏰'}</span>
+        ${escapeHtml(countdown.name)}
+      </div>
+      <div class="response-item-actions">
+        <button class="response-item-btn edit-btn" data-action="edit" data-index="${index}">Edit</button>
+        <button class="response-item-btn delete-btn-admin" data-action="delete" data-index="${index}">Delete</button>
+      </div>
+    </div>
+    <div class="response-item-field">
+      <label>Type:</label>
+      <div>${countdown.type === 'countup' ? 'Count Up' : 'Countdown'}</div>
+    </div>
+    <div class="response-item-field">
+      <label>Date & Time:</label>
+      <div>${dateStr}</div>
+    </div>
+    <div class="response-item-field">
+      <label>Pin to Dashboard:</label>
+      <div>${countdown.pinnedToDashboard !== false ? '✅ Yes' : '❌ No'}</div>
+    </div>
+  `;
+  
+  // Edit button
+  div.querySelector('[data-action="edit"]').addEventListener('click', () => {
+    chrome.storage.sync.get(['countdowns'], (result) => {
+      openCountdownModal(result.countdowns[index], index);
+    });
+  });
+  
+  // Delete button
+  div.querySelector('[data-action="delete"]').addEventListener('click', () => {
+    if (confirm(`Delete "${countdown.name}"?`)) {
+      deleteCountdown(index);
+    }
+  });
+  
+  return div;
+}
+
+function openCountdownModal(countdown = null, index = null) {
+  // Create modal if it doesn't exist
+  let modal = document.getElementById('countdownModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'countdownModal';
+    modal.className = 'response-modal';
+    modal.innerHTML = `
+      <div class="response-modal-content">
+        <span class="response-modal-close" id="closeCountdownModal">&times;</span>
+        <h3>${countdown ? 'Edit Countdown' : 'Add Countdown'}</h3>
+        <form id="countdownForm">
+          <div class="input-group">
+            <label for="countdownName">Name *</label>
+            <input type="text" id="countdownName" required placeholder="Event name">
+          </div>
+          
+          <div class="input-group">
+            <label for="countdownType">Type *</label>
+            <select id="countdownType" required>
+              <option value="countdown">Countdown</option>
+              <option value="countup">Count Up</option>
+            </select>
+          </div>
+          
+          <div class="input-group">
+            <label for="countdownDate">Date *</label>
+            <div class="date-inputs">
+              <select id="countdownMonth" required>
+                <option value="">Month</option>
+                <option value="0">Jan</option>
+                <option value="1">Feb</option>
+                <option value="2">Mar</option>
+                <option value="3">Apr</option>
+                <option value="4">May</option>
+                <option value="5">Jun</option>
+                <option value="6">Jul</option>
+                <option value="7">Aug</option>
+                <option value="8">Sep</option>
+                <option value="9">Oct</option>
+                <option value="10">Nov</option>
+                <option value="11">Dec</option>
+              </select>
+              <select id="countdownDay" required>
+                <option value="">Day</option>
+              </select>
+              <select id="countdownYear" required>
+                <option value="">Year</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="input-group">
+            <label for="countdownTime">Time</label>
+            <input type="time" id="countdownTime" value="00:00">
+          </div>
+          
+          <div class="input-group">
+            <label for="countdownIcon">Icon</label>
+            <div class="icon-selector">
+              <button type="button" class="icon-picker-btn" id="iconPickerBtn">
+                <span id="selectedIcon">⏰</span>
+                <span class="icon-arrow">▼</span>
+              </button>
+              <div class="icon-grid" id="iconGrid" style="display: none;">
+                <button type="button" class="icon-option" data-icon="⏰">⏰</button>
+                <button type="button" class="icon-option" data-icon="🎉">🎉</button>
+                <button type="button" class="icon-option" data-icon="🎂">🎂</button>
+                <button type="button" class="icon-option" data-icon="🎄">🎄</button>
+                <button type="button" class="icon-option" data-icon="🎁">🎁</button>
+                <button type="button" class="icon-option" data-icon="📅">📅</button>
+                <button type="button" class="icon-option" data-icon="🚀">🚀</button>
+                <button type="button" class="icon-option" data-icon="⭐">⭐</button>
+                <button type="button" class="icon-option" data-icon="💼">💼</button>
+                <button type="button" class="icon-option" data-icon="🏆">🏆</button>
+                <button type="button" class="icon-option" data-icon="🎯">🎯</button>
+                <button type="button" class="icon-option" data-icon="📌">📌</button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="input-group">
+            <label class="toggle-label">
+              <span>Pin to Dashboard</span>
+              <input type="checkbox" id="countdownPinned" checked>
+              <span class="toggle-switch"></span>
+            </label>
+          </div>
+          
+          <input type="hidden" id="countdownId">
+          <div class="button-group-inline" style="margin-top: 1rem;">
+            <button type="submit" class="save-settings-btn" style="flex: 1;">${countdown ? 'Update' : 'Add'} Countdown</button>
+            <button type="button" class="reset-btn" id="cancelCountdownBtn">Cancel</button>
+          </div>
+        </form>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    
+    // Populate date dropdowns
+    populateDateDropdowns();
+    
+    // Close handlers
+    document.getElementById('closeCountdownModal').addEventListener('click', () => {
+      modal.classList.remove('active');
+    });
+    
+    document.getElementById('cancelCountdownBtn').addEventListener('click', () => {
+      modal.classList.remove('active');
+    });
+    
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.classList.remove('active');
+      }
+    });
+    
+    // Form submit
+    document.getElementById('countdownForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      saveCountdown(index);
+    });
+    
+    // Icon picker
+    document.getElementById('iconPickerBtn').addEventListener('click', (e) => {
+      e.preventDefault();
+      const iconGrid = document.getElementById('iconGrid');
+      iconGrid.style.display = iconGrid.style.display === 'none' ? 'grid' : 'none';
+    });
+    
+    // Icon selection
+    modal.querySelectorAll('.icon-option').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const icon = btn.dataset.icon;
+        document.getElementById('selectedIcon').textContent = icon;
+        document.getElementById('iconGrid').style.display = 'none';
+      });
+    });
+    
+    // Update day dropdown when month/year changes
+    document.getElementById('countdownMonth').addEventListener('change', updateDayDropdown);
+    document.getElementById('countdownYear').addEventListener('change', updateDayDropdown);
+  }
+  
+  // Populate form if editing
+  if (countdown) {
+    document.getElementById('countdownId').value = index;
+    document.getElementById('countdownName').value = countdown.name;
+    document.getElementById('countdownType').value = countdown.type || 'countdown';
+    
+    const targetDate = new Date(countdown.date);
+    document.getElementById('countdownMonth').value = targetDate.getMonth();
+    document.getElementById('countdownYear').value = targetDate.getFullYear();
+    updateDayDropdown();
+    document.getElementById('countdownDay').value = targetDate.getDate();
+    
+    const hours = targetDate.getHours().toString().padStart(2, '0');
+    const minutes = targetDate.getMinutes().toString().padStart(2, '0');
+    document.getElementById('countdownTime').value = `${hours}:${minutes}`;
+    
+    document.getElementById('selectedIcon').textContent = countdown.icon || '⏰';
+    document.getElementById('countdownPinned').checked = countdown.pinnedToDashboard !== false;
+    
+    // Update modal title
+    modal.querySelector('h3').textContent = 'Edit Countdown';
+    modal.querySelector('button[type="submit"]').textContent = 'Update Countdown';
+  } else {
+    document.getElementById('countdownForm').reset();
+    document.getElementById('countdownId').value = '';
+    document.getElementById('countdownType').value = 'countdown';
+    document.getElementById('selectedIcon').textContent = '⏰';
+    document.getElementById('countdownPinned').checked = true;
+    
+    // Set default date to today
+    const today = new Date();
+    document.getElementById('countdownMonth').value = today.getMonth();
+    document.getElementById('countdownYear').value = today.getFullYear();
+    updateDayDropdown();
+    document.getElementById('countdownDay').value = today.getDate();
+    
+    // Update modal title
+    modal.querySelector('h3').textContent = 'Add Countdown';
+    modal.querySelector('button[type="submit"]').textContent = 'Add Countdown';
+  }
+  
+  modal.classList.add('active');
+  document.getElementById('countdownName').focus();
+}
+
+function saveCountdown() {
+  const name = document.getElementById('countdownName').value.trim();
+  const type = document.getElementById('countdownType').value;
+  const month = parseInt(document.getElementById('countdownMonth').value);
+  const day = parseInt(document.getElementById('countdownDay').value);
+  const year = parseInt(document.getElementById('countdownYear').value);
+  const time = document.getElementById('countdownTime').value;
+  const icon = document.getElementById('selectedIcon').textContent;
+  const pinned = document.getElementById('countdownPinned').checked;
+  const id = document.getElementById('countdownId').value;
+  
+  if (!name || isNaN(month) || isNaN(day) || isNaN(year)) {
+    showStatus('Please fill in all required fields', 'error');
+    return;
+  }
+  
+  // Create date from inputs
+  const [hours, minutes] = time.split(':').map(Number);
+  const targetDate = new Date(year, month, day, hours || 0, minutes || 0);
+  
+  chrome.storage.sync.get(['countdowns'], (result) => {
+    const countdowns = result.countdowns || [];
+    
+    const countdownData = {
+      id: id !== '' ? countdowns[parseInt(id)].id : Date.now().toString(),
+      name,
+      type,
+      date: targetDate.toISOString(),
+      icon,
+      pinnedToDashboard: pinned
+    };
+    
+    if (id !== '') {
+      // Edit existing
+      countdowns[parseInt(id)] = countdownData;
+    } else {
+      // Add new
+      countdowns.push(countdownData);
+    }
+    
+    chrome.storage.sync.set({ countdowns }, () => {
+      showStatus(`Countdown ${id !== '' ? 'updated' : 'added'} successfully!`, 'success');
+      loadCountdowns();
+      document.getElementById('countdownModal').classList.remove('active');
+    });
+  });
+}
+
+function deleteCountdown(index) {
+  if (!confirm('Are you sure you want to delete this countdown?')) {
+    return;
+  }
+  
+  chrome.storage.sync.get(['countdowns'], (result) => {
+    const countdowns = result.countdowns || [];
+    countdowns.splice(index, 1);
+    
+    chrome.storage.sync.set({ countdowns }, () => {
+      showStatus('Countdown deleted', 'success');
+      loadCountdowns();
+    });
+  });
+}
+
 

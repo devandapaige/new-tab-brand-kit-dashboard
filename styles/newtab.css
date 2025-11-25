@@ -142,6 +142,78 @@ body {
   margin-bottom: 1rem;
 }
 
+/* Trackers */
+.trackers-card {
+  min-height: 150px;
+}
+
+.trackers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.tracker-placeholder {
+  text-align: center;
+  padding: 1.5rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+.tracker-item {
+  padding: 1rem;
+  background: rgba(var(--secondary-color-rgb), 0.1);
+  border-left: 4px solid var(--secondary-color);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.tracker-item:hover {
+  transform: translateX(5px);
+  box-shadow: var(--shadow);
+}
+
+.tracker-item.tracker-expired {
+  opacity: 0.6;
+  border-left-color: var(--text-secondary);
+}
+
+.tracker-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.tracker-icon {
+  font-size: 1.5rem;
+}
+
+.tracker-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.tracker-display {
+  margin-top: 0.5rem;
+}
+
+.tracker-time {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+}
+
+.tracker-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
 /* Todoist */
 .todoist-card {
   min-height: 300px;
@@ -174,7 +246,7 @@ body {
   text-align: center;
   padding: 2rem;
   color: var(--text-secondary);
-  font-size: 0.9rem;
+  font-size: 0.875rem;
 }
 
 .todoist-tasks-list {
@@ -185,8 +257,8 @@ body {
 
 .todoist-task-item {
   padding: 0.75rem;
-  background: rgba(var(--primary-color-rgb), 0.1);
-  border-left: 4px solid var(--primary-color);
+  background: rgba(var(--secondary-color-rgb), 0.1);
+  border-left: 4px solid var(--secondary-color);
   border-radius: 8px;
   transition: all 0.3s ease;
   cursor: pointer;
@@ -195,7 +267,6 @@ body {
 .todoist-task-item:hover {
   transform: translateX(5px);
   box-shadow: var(--shadow);
-  background: rgba(var(--primary-color-rgb), 0.15);
 }
 
 .todoist-task-item.completed {
