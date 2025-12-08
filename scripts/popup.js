@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Load brand colors and apply to popup
 function loadBrandColors() {
-  chrome.storage.sync.get(['primaryColor', 'secondaryColor', 'accentColor'], (result) => {
+  chrome.storage.sync.get(['primaryColor', 'secondaryColor', 'accentColor', 'borderRadius'], (result) => {
     const root = document.documentElement;
     
     if (result.primaryColor) {
@@ -25,6 +25,38 @@ function loadBrandColors() {
     
     if (result.accentColor) {
       root.style.setProperty('--accent-color', result.accentColor);
+    }
+    
+    // Apply border radius
+    const borderRadius = result.borderRadius !== undefined ? result.borderRadius : 8;
+    root.style.setProperty('--border-radius', `${borderRadius}px`);
+    root.style.setProperty('--border-radius-sm', `${Math.round(borderRadius * 0.75)}px`);
+    root.style.setProperty('--border-radius-lg', `${Math.round(borderRadius * 1.5)}px`);
+  });
+  
+  // Load company logo from local storage
+  chrome.storage.local.get(['companyLogo'], (localResult) => {
+    const companyLogoEl = document.getElementById('popupCompanyLogo');
+    if (companyLogoEl && localResult.companyLogo) {
+      companyLogoEl.src = localResult.companyLogo;
+      companyLogoEl.style.display = 'block';
+    } else if (companyLogoEl) {
+      companyLogoEl.style.display = 'none';
+    }
+  });
+  
+  // Listen for logo changes
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === 'local' && changes.companyLogo) {
+      const companyLogoEl = document.getElementById('popupCompanyLogo');
+      if (companyLogoEl) {
+        if (changes.companyLogo.newValue) {
+          companyLogoEl.src = changes.companyLogo.newValue;
+          companyLogoEl.style.display = 'block';
+        } else {
+          companyLogoEl.style.display = 'none';
+        }
+      }
     }
   });
 }

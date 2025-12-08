@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="script-src 'self'; object-src 'self';">
+  <meta http-equiv="Content-Security-Policy" content="script-src 'self'; object-src 'self'; frame-src 'self';">
   <title>Brand Kit Dashboard</title>
   <link rel="stylesheet" href="styles/newtab.css">
 </head>
@@ -17,19 +17,37 @@
     
     <!-- Main Content -->
     <div class="content-wrapper">
-      <!-- Header Section -->
-      <header class="header-section">
-        <div class="greeting" id="greeting">
-          <span id="greetingText">Good morning</span>, <span id="userName">Team</span>.
+      <!-- Top Section: Logo, Header, Business Info, Settings -->
+      <div class="top-section">
+        <!-- Logo -->
+        <div class="logo-container">
+          <img id="companyLogo" src="" alt="Company Logo" style="display: none; max-width: 150px; max-height: 150px; object-fit: contain;">
         </div>
-        <div class="date-time" id="dateTime"></div>
+        
+        <!-- Header Section -->
+        <header class="header-section">
+          <div class="greeting" id="greeting">
+            <span id="greetingText">Good morning</span>, <span id="userName">Team</span>.
+          </div>
+          <div class="date-time" id="dateTime"></div>
+        </header>
+        
+        <!-- Business Info -->
+        <div class="business-info" id="businessInfo" style="display: none;">
+          <div id="businessInfoLine1"></div>
+          <div id="businessInfoLine2"></div>
+          <div id="businessInfoLine3"></div>
+          <div id="businessInfoLine4"></div>
+        </div>
+        
+        <!-- Settings Button -->
         <button class="settings-btn" id="settingsBtn" title="Settings (Ctrl/Cmd+K)" aria-label="Open settings">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <circle cx="12" cy="12" r="3"></circle>
             <path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"></path>
           </svg>
         </button>
-      </header>
+      </div>
 
       <!-- Main Dashboard Grid -->
       <div class="dashboard-grid">
@@ -39,7 +57,6 @@
           <section class="card trackers-card" id="trackersCard">
             <div class="card-header">
               <h2 class="card-title">Trackers</h2>
-              <button class="add-btn" id="addTrackerBtn" aria-label="Add tracker (Press T)">+ Add</button>
             </div>
             <div class="trackers-list" id="trackersList">
               <div class="tracker-placeholder">No trackers pinned to dashboard</div>
@@ -50,7 +67,6 @@
           <section class="card notes-card">
             <div class="card-header">
               <h2 class="card-title">Notes</h2>
-              <button class="add-btn" id="addNoteBtn" aria-label="Add note (Press N)">+ Add</button>
             </div>
             <div class="notes-list" id="notesList"></div>
           </section>
@@ -62,7 +78,6 @@
           <section class="card links-card">
             <div class="card-header">
               <h2 class="card-title">Quick Links</h2>
-              <button class="add-btn" id="addLinkBtn" aria-label="Add link (Press L)">+ Add</button>
             </div>
             <div class="links-grid" id="linksGrid"></div>
           </section>
@@ -71,6 +86,7 @@
 
         <!-- Right Column -->
         <div class="column-right">
+
           <!-- Todoist Today -->
           <section class="card todoist-card">
             <div class="card-header">
@@ -87,104 +103,6 @@
   </div>
 
   <!-- Modals -->
-  <div class="modal" id="linkModal">
-    <div class="modal-content">
-      <span class="close" id="closeLinkModal">&times;</span>
-      <h2>Add Link</h2>
-      <form id="linkForm">
-        <input type="text" id="linkName" placeholder="Link name" required>
-        <input type="url" id="linkUrl" placeholder="https://example.com" required>
-        <div>
-          <label for="linkIcon" style="display: block; margin-bottom: 0.5rem; color: var(--text-primary); font-weight: 500;">Icon (Optional - emoji or leave empty for first letter)</label>
-          <input type="text" id="linkIcon" placeholder="🔗 or leave empty" maxlength="2">
-          <small style="display: block; margin-top: 0.25rem; color: var(--text-secondary); font-size: 0.875rem;">Enter an emoji or leave empty to use the first letter of the link name</small>
-        </div>
-        <button type="submit" class="submit-btn">Add Link</button>
-      </form>
-    </div>
-  </div>
-
-  <div class="modal" id="noteModal">
-    <div class="modal-content">
-      <span class="close" id="closeNoteModal">&times;</span>
-      <h2>Add Note</h2>
-      <form id="noteForm">
-        <input type="text" id="noteTitle" placeholder="Note title" required>
-        <textarea id="noteContent" placeholder="Note content" required></textarea>
-        <button type="submit" class="submit-btn">Add Note</button>
-      </form>
-    </div>
-  </div>
-
-  <div class="modal" id="trackerModal">
-    <div class="modal-content">
-      <span class="close" id="closeTrackerModal">&times;</span>
-      <h2>Add Tracker</h2>
-      <form id="trackerForm">
-        <input type="text" id="trackerName" placeholder="Event name" required>
-        
-        <select id="trackerType" required>
-          <option value="countdown">Countdown</option>
-          <option value="countup">Count Up</option>
-        </select>
-        
-        <div class="date-inputs">
-          <select id="trackerMonth" required>
-            <option value="">Month</option>
-            <option value="0">Jan</option>
-            <option value="1">Feb</option>
-            <option value="2">Mar</option>
-            <option value="3">Apr</option>
-            <option value="4">May</option>
-            <option value="5">Jun</option>
-            <option value="6">Jul</option>
-            <option value="7">Aug</option>
-            <option value="8">Sep</option>
-            <option value="9">Oct</option>
-            <option value="10">Nov</option>
-            <option value="11">Dec</option>
-          </select>
-          <select id="trackerDay" required>
-            <option value="">Day</option>
-          </select>
-          <select id="trackerYear" required>
-            <option value="">Year</option>
-          </select>
-        </div>
-        
-        <input type="time" id="trackerTime" value="00:00">
-        
-        <div class="icon-selector">
-          <button type="button" class="icon-picker-btn" id="trackerIconPickerBtn">
-            <span id="trackerSelectedIcon">⏰</span>
-            <span class="icon-arrow">▼</span>
-          </button>
-          <div class="icon-grid" id="trackerIconGrid" style="display: none;">
-            <button type="button" class="icon-option" data-icon="⏰">⏰</button>
-            <button type="button" class="icon-option" data-icon="🎉">🎉</button>
-            <button type="button" class="icon-option" data-icon="🎂">🎂</button>
-            <button type="button" class="icon-option" data-icon="🎄">🎄</button>
-            <button type="button" class="icon-option" data-icon="🎁">🎁</button>
-            <button type="button" class="icon-option" data-icon="📅">📅</button>
-            <button type="button" class="icon-option" data-icon="🚀">🚀</button>
-            <button type="button" class="icon-option" data-icon="⭐">⭐</button>
-            <button type="button" class="icon-option" data-icon="💼">💼</button>
-            <button type="button" class="icon-option" data-icon="🏆">🏆</button>
-            <button type="button" class="icon-option" data-icon="🎯">🎯</button>
-            <button type="button" class="icon-option" data-icon="📌">📌</button>
-          </div>
-        </div>
-        
-        <label class="toggle-label">
-          <span>Pin to Dashboard</span>
-          <input type="checkbox" id="trackerPinned" checked>
-          <span class="toggle-switch"></span>
-        </label>
-        
-        <button type="submit" class="submit-btn">Add Tracker</button>
-      </form>
-    </div>
-  </div>
 
   <script src="scripts/newtab.js"></script>
 </body>

@@ -5,6 +5,9 @@
   --accent-color: #ff6b6b;
   --text-primary: #1e293b;
   --text-secondary: #64748b;
+  --border-radius: 8px;
+  --border-radius-sm: 6px;
+  --border-radius-lg: 12px;
 }
 
 * {
@@ -24,7 +27,7 @@ body {
   max-width: 900px;
   margin: 0 auto;
   background: white;
-  border-radius: 12px;
+  border-radius: var(--border-radius-lg);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   overflow: hidden;
 }
@@ -100,7 +103,7 @@ body {
   width: 60px;
   height: 40px;
   border: 2px solid #e2e8f0;
-  border-radius: 8px;
+  border-radius: var(--border-radius);
   cursor: pointer;
   padding: 0;
 }
@@ -111,14 +114,14 @@ body {
 
 .color-picker-wrapper input[type="color"]::-webkit-color-swatch {
   border: none;
-  border-radius: 6px;
+  border-radius: var(--border-radius-sm);
 }
 
 .color-text-input {
   flex: 1;
   padding: 0.75rem;
   border: 2px solid #e2e8f0;
-  border-radius: 8px;
+  border-radius: var(--border-radius);
   font-size: 0.9rem;
   font-family: 'Monaco', 'Courier New', monospace;
 }
@@ -145,7 +148,7 @@ body {
   width: 100%;
   padding: 0.75rem;
   border: 2px solid #e2e8f0;
-  border-radius: 8px;
+  border-radius: var(--border-radius);
   font-size: 1rem;
   transition: border-color 0.3s ease;
 }
@@ -181,7 +184,7 @@ body {
 .import-btn {
   padding: 0.75rem 1.5rem;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--border-radius);
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
@@ -222,7 +225,7 @@ body {
 .preview-btn {
   padding: 0.75rem 2rem;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--border-radius);
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
@@ -269,7 +272,7 @@ body {
   background: var(--secondary-color);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--border-radius);
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
@@ -293,7 +296,7 @@ body {
 .status-message {
   margin-top: 1rem;
   padding: 1rem;
-  border-radius: 8px;
+  border-radius: var(--border-radius);
   text-align: center;
   font-weight: 500;
   display: none;
@@ -321,7 +324,7 @@ body {
 .admin-lock-section {
   background: #fef3c7;
   border: 2px solid #fbbf24;
-  border-radius: 12px;
+  border-radius: var(--border-radius-lg);
   padding: 1.5rem;
   margin-bottom: 2rem;
 }
@@ -345,7 +348,7 @@ body {
   gap: 0.5rem;
   padding: 0.5rem 1rem;
   background: rgba(102, 126, 234, 0.05);
-  border-radius: 6px;
+  border-radius: var(--border-radius-sm);
   font-size: 0.875rem;
 }
 
@@ -426,7 +429,7 @@ body {
   background: var(--accent-color);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--border-radius);
   cursor: pointer;
   font-weight: 600;
   transition: all 0.3s ease;
@@ -450,7 +453,7 @@ body {
 .admin-unlock-form {
   padding: 1rem;
   background: white;
-  border-radius: 8px;
+  border-radius: var(--border-radius);
   border: 1px solid #e2e8f0;
   margin-top: 1rem;
 }
@@ -459,7 +462,7 @@ body {
   width: 100%;
   padding: 0.875rem 1rem;
   border: 2px solid #cbd5e1;
-  border-radius: 8px;
+  border-radius: var(--border-radius);
   font-size: 1rem;
   background: white;
   color: #1e293b;
@@ -483,7 +486,7 @@ body {
   background: #ef4444;
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--border-radius);
   cursor: pointer;
   font-weight: 600;
   transition: all 0.3s ease;
@@ -531,7 +534,7 @@ body {
   padding: 1.5rem;
   background: #f1f5f9;
   border: 2px dashed #cbd5e1;
-  border-radius: 8px;
+  border-radius: var(--border-radius);
   text-align: center;
   color: #64748b;
   font-weight: 500;
@@ -546,7 +549,7 @@ body {
   background: var(--secondary-color);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--border-radius);
   cursor: pointer;
   font-weight: 600;
   margin-top: 0.5rem;
@@ -569,7 +572,7 @@ body {
   background: var(--secondary-color);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--border-radius);
   cursor: pointer;
   font-weight: 600;
   transition: all 0.3s ease;
@@ -592,7 +595,7 @@ body {
   padding: 1rem;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  border-radius: var(--border-radius);
   transition: all 0.3s ease;
 }
 
@@ -648,7 +651,7 @@ body {
 .delete-countdown-btn {
   padding: 0.5rem 1rem;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--border-radius-sm);
   cursor: pointer;
   font-weight: 500;
   font-size: 0.875rem;
@@ -685,7 +688,7 @@ body {
   flex: 1;
   padding: 0.75rem;
   border: 2px solid #e2e8f0;
-  border-radius: 8px;
+  border-radius: var(--border-radius);
   font-size: 1rem;
   background: white;
   cursor: pointer;
@@ -709,7 +712,7 @@ body {
   width: 100%;
   padding: 0.5rem;
   border: 2px solid #e2e8f0;
-  border-radius: 6px;
+  border-radius: var(--border-radius-sm);
   background: white;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -737,7 +740,7 @@ body {
   padding: 0.75rem;
   background: white;
   border: 2px solid #e2e8f0;
-  border-radius: 8px;
+  border-radius: var(--border-radius);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   z-index: 1001;
 }
@@ -745,7 +748,7 @@ body {
 .icon-option {
   padding: 0.75rem;
   border: 2px solid #e2e8f0;
-  border-radius: 6px;
+  border-radius: var(--border-radius-sm);
   background: white;
   cursor: pointer;
   font-size: 1.5rem;
@@ -766,7 +769,7 @@ body {
   font-weight: 500;
   color: var(--text-primary);
   padding: 0.5rem;
-  border-radius: 6px;
+  border-radius: var(--border-radius-sm);
   transition: background-color 0.3s ease;
 }
 
@@ -778,10 +781,10 @@ body {
   position: relative;
   width: 52px;
   height: 28px;
-  background: #94a3b8;
-  border-radius: 14px;
+  background: #cbd5e1;
+  border-radius: calc(var(--border-radius) * 1.75);
   transition: all 0.3s ease;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .toggle-switch::after {
@@ -794,12 +797,12 @@ body {
   top: 3px;
   left: 3px;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .toggle-label input[type="checkbox"]:checked + .toggle-switch {
-  background: var(--secondary-color);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1), 0 0 0 3px rgba(118, 75, 162, 0.2);
+  background: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2), inset 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .toggle-label input[type="checkbox"]:checked + .toggle-switch::after {
@@ -836,7 +839,7 @@ body {
   background: var(--secondary-color);
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--border-radius-sm);
   cursor: pointer;
   font-weight: 600;
   font-size: 0.9rem;
@@ -858,7 +861,7 @@ body {
   padding: 1rem;
   background: white;
   border: 2px solid #e2e8f0;
-  border-radius: 8px;
+  border-radius: var(--border-radius);
   transition: all 0.3s ease;
 }
 
@@ -880,7 +883,9 @@ body {
   font-size: 1rem;
 }
 
-.response-item-actions {
+.response-item-actions,
+.link-item-actions,
+.note-item-actions {
   display: flex;
   gap: 0.5rem;
 }
@@ -888,7 +893,7 @@ body {
 .response-item-btn {
   padding: 0.4rem 0.8rem;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--border-radius-sm);
   cursor: pointer;
   font-size: 0.85rem;
   font-weight: 500;
@@ -930,7 +935,7 @@ body {
   width: 100%;
   padding: 0.5rem;
   border: 1px solid #e2e8f0;
-  border-radius: 6px;
+  border-radius: var(--border-radius-sm);
   font-size: 0.9rem;
   font-family: inherit;
 }
@@ -967,7 +972,7 @@ body {
 .response-modal-content {
   background: white;
   padding: 2rem;
-  border-radius: 12px;
+  border-radius: var(--border-radius-lg);
   max-width: 500px;
   width: 90%;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
@@ -996,7 +1001,7 @@ body {
   width: 100%;
   padding: 0.5rem;
   border: 2px solid #e2e8f0;
-  border-radius: 6px;
+  border-radius: var(--border-radius-sm);
   font-size: 0.9rem;
   font-family: inherit;
   color: #1e293b;
@@ -1020,7 +1025,7 @@ body {
   width: 100%;
   padding: 0.5rem;
   border: 2px solid #e2e8f0;
-  border-radius: 6px;
+  border-radius: var(--border-radius-sm);
   font-size: 0.9rem;
   font-family: inherit;
   color: #1e293b;
@@ -1081,5 +1086,137 @@ body {
   .preview-btn {
     width: 100%;
   }
+}
+
+/* Links and Notes Management Styles */
+.admin-links-list,
+.admin-notes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.admin-link-item,
+.admin-note-item {
+  padding: 1rem;
+  background: white;
+  border: 2px solid #e2e8f0;
+  border-radius: var(--border-radius);
+  transition: all 0.3s ease;
+}
+
+.admin-link-item:hover,
+.admin-note-item:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+}
+
+.links-header,
+.notes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.links-header-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.add-link-btn,
+.add-note-btn {
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: var(--border-radius-sm);
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.add-link-btn:hover,
+.add-note-btn:hover {
+  background: #5568d3;
+}
+
+.link-item-header,
+.note-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.note-item-header {
+  align-items: flex-start;
+}
+
+.link-item-icon {
+  width: 40px;
+  height: 40px;
+  background: #667eea;
+  border-radius: var(--border-radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  color: white;
+  flex-shrink: 0;
+}
+
+.link-item-info {
+  flex: 1;
+  margin-left: 1rem;
+}
+
+.link-item-name {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.link-item-url {
+  font-size: 0.875rem;
+  color: #64748b;
+  word-break: break-all;
+}
+
+.link-item-actions,
+.note-item-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.link-item-btn,
+.note-item-btn {
+  padding: 0.4rem 0.8rem;
+  border: none;
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.note-item-info {
+  flex: 1;
+}
+
+.note-item-title {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.note-item-content {
+  font-size: 0.875rem;
+  color: #64748b;
+  line-height: 1.5;
+  max-height: 100px;
+  overflow: auto;
 }
 

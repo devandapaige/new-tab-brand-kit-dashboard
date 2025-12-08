@@ -90,18 +90,48 @@
         <p class="section-description">Customize the background image and overlay</p>
         
         <div class="input-group">
-          <label for="backgroundImage">Background Image URL</label>
-          <input type="url" id="backgroundImage" placeholder="https://example.com/image.jpg">
-          <small>Enter a URL to a background image, or leave empty for default</small>
+          <label>Background Image</label>
+          <div style="display: flex; gap: 1rem; margin-bottom: 0.5rem;">
+            <div style="flex: 1;">
+              <label for="backgroundImage" style="display: block; margin-bottom: 0.5rem; font-size: 0.875rem; color: #64748b;">Image URL</label>
+              <input type="text" id="backgroundImage" placeholder="https://example.com/image.jpg or data URL" style="width: 100%;">
+            </div>
+            <div style="flex: 1;">
+              <label for="backgroundImageUpload" style="display: block; margin-bottom: 0.5rem; font-size: 0.875rem; color: #64748b;">Or Upload Image</label>
+              <input type="file" id="backgroundImageUpload" accept="image/*" style="width: 100%; padding: 0.5rem; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 0.875rem;">
+            </div>
+          </div>
+          <small>Enter a URL to a background image, or upload an image file. Leave empty for default.</small>
+          <div id="backgroundImagePreview" style="margin-top: 1rem; display: none;">
+            <label style="display: block; margin-bottom: 0.5rem; font-size: 0.875rem; color: #64748b;">Preview</label>
+            <div style="border: 2px solid #e2e8f0; border-radius: 8px; overflow: hidden; max-width: 400px; max-height: 200px;">
+              <img id="backgroundImagePreviewImg" src="" alt="Background preview" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+            </div>
+            <button type="button" id="clearBackgroundImage" class="reset-btn" style="margin-top: 0.5rem; padding: 0.5rem 1rem; font-size: 0.875rem;">Clear Image</button>
+          </div>
         </div>
         
         <div class="input-group">
+          <label class="toggle-label" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+            <span>Enable Background Overlay</span>
+            <input type="checkbox" id="overlayEnabled" checked>
+            <span class="toggle-switch"></span>
+          </label>
+          <small style="display: block; margin-bottom: 1rem; color: #64748b;">Toggle the overlay on/off to show or hide the background image</small>
+        </div>
+        
+        <div class="input-group" id="overlayControls">
           <label for="backgroundColor">Background Overlay Color</label>
           <div class="color-picker-wrapper">
             <input type="color" id="backgroundColor" value="#0F172A">
-            <input type="text" id="backgroundColorText" value="rgba(15, 23, 42, 0.85)" class="color-text-input">
+            <input type="text" id="backgroundColorText" value="rgba(15, 23, 42, 0.2)" class="color-text-input">
           </div>
-          <small>This color overlays the background image for better text readability</small>
+          
+          <label for="overlayOpacity" style="display: block; margin-top: 1rem; margin-bottom: 0.5rem; font-size: 0.875rem; color: #64748b;">
+            Overlay Opacity: <span id="overlayOpacityValue">20</span>%
+          </label>
+          <input type="range" id="overlayOpacity" min="0" max="100" value="20" style="width: 100%;">
+          <small>Adjust the overlay transparency. Lower values allow more of the background image to show through.</small>
         </div>
       </section>
 
@@ -116,6 +146,12 @@
             <input type="color" id="cardBackground" value="#FFFFFF">
             <input type="text" id="cardBackgroundText" value="rgba(255, 255, 255, 0.95)" class="color-text-input">
           </div>
+          
+          <label for="cardBackgroundOpacity" style="display: block; margin-top: 1rem; margin-bottom: 0.5rem; font-size: 0.875rem; color: #64748b;">
+            Card Background Opacity: <span id="cardBackgroundOpacityValue">95</span>%
+          </label>
+          <input type="range" id="cardBackgroundOpacity" min="0" max="100" value="95" style="width: 100%;">
+          <small>Adjust the card background transparency. Lower values make cards more transparent.</small>
         </div>
         
         <div class="input-group">
@@ -133,6 +169,47 @@
             <input type="text" id="textSecondaryText" value="#64748B" class="color-text-input">
           </div>
         </div>
+        
+        <div class="input-group">
+          <label for="textLight">Header Text Color</label>
+          <div class="color-picker-wrapper">
+            <input type="color" id="textLight" value="#FFFFFF">
+            <input type="text" id="textLightText" value="#FFFFFF" class="color-text-input">
+          </div>
+          <small>Color for text in the header area (greeting, date, business info)</small>
+        </div>
+        
+        <div class="input-group">
+          <label for="borderColor">Border Color</label>
+          <div class="color-picker-wrapper">
+            <input type="color" id="borderColor" value="#E2E8F0">
+            <input type="text" id="borderColorText" value="rgba(226, 232, 240, 0.5)" class="color-text-input">
+          </div>
+          
+          <label for="borderColorOpacity" style="display: block; margin-top: 1rem; margin-bottom: 0.5rem; font-size: 0.875rem; color: #64748b;">
+            Border Opacity: <span id="borderColorOpacityValue">50</span>%
+          </label>
+          <input type="range" id="borderColorOpacity" min="0" max="100" value="50" style="width: 100%;">
+          <small>Color for card borders and dividers. Adjust opacity for subtle or bold borders.</small>
+        </div>
+        
+        <div class="input-group">
+          <label for="shadowIntensity">Shadow Intensity</label>
+          <label for="shadowIntensity" style="display: block; margin-top: 0.5rem; margin-bottom: 0.5rem; font-size: 0.875rem; color: #64748b;">
+            Shadow Intensity: <span id="shadowIntensityValue">15</span>%
+          </label>
+          <input type="range" id="shadowIntensity" min="0" max="100" value="15" style="width: 100%;">
+          <small>Adjust the intensity of card shadows. Higher values create more prominent shadows.</small>
+        </div>
+        
+        <div class="input-group">
+          <label for="borderRadius">Border Radius</label>
+          <label for="borderRadius" style="display: block; margin-top: 0.5rem; margin-bottom: 0.5rem; font-size: 0.875rem; color: #64748b;">
+            Border Radius: <span id="borderRadiusValue">8</span>px
+          </label>
+          <input type="range" id="borderRadius" min="0" max="24" value="8" step="1" style="width: 100%;">
+          <small>Adjust the border radius for all cards, buttons, and UI elements. Higher values create more rounded corners.</small>
+        </div>
       </section>
 
       <!-- General Settings -->
@@ -143,6 +220,105 @@
           <label for="userName">Team/User Name</label>
           <input type="text" id="userName" placeholder="Team">
           <small>This name appears in the greeting</small>
+        </div>
+        
+        <div class="input-group">
+          <label>Company Logo</label>
+          <input type="file" id="companyLogoUpload" accept="image/png" style="width: 100%; padding: 0.5rem; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 0.875rem; margin-bottom: 0.5rem;">
+          <small>Upload a square PNG logo (recommended: 200x200px or larger). Will appear in the top-left corner.</small>
+          <div id="companyLogoPreview" style="margin-top: 1rem; display: none;">
+            <div style="border: 2px solid #e2e8f0; border-radius: 8px; overflow: hidden; max-width: 150px; max-height: 150px; background: white; padding: 0.5rem;">
+              <img id="companyLogoPreviewImg" src="" alt="Logo preview" style="width: 100%; height: 100%; object-fit: contain; display: block;">
+            </div>
+            <button type="button" id="clearCompanyLogo" class="reset-btn" style="margin-top: 0.5rem; padding: 0.5rem 1rem; font-size: 0.875rem;">Clear Logo</button>
+          </div>
+          <input type="text" id="companyLogo" style="display: none;">
+        </div>
+      </section>
+
+      <!-- Business Information -->
+      <section class="settings-section locked">
+        <h2>Business Information</h2>
+        <p class="section-description">Add up to 4 lines of business information (address, phone, etc.). You can use {{userName}} to insert the team/user name.</p>
+        
+        <div class="input-group">
+          <label for="businessInfoLine1">Line 1</label>
+          <input type="text" id="businessInfoLine1" placeholder="e.g., 123 Main Street">
+        </div>
+        
+        <div class="input-group">
+          <label for="businessInfoLine2">Line 2</label>
+          <input type="text" id="businessInfoLine2" placeholder="e.g., Suite 100">
+        </div>
+        
+        <div class="input-group">
+          <label for="businessInfoLine3">Line 3</label>
+          <input type="text" id="businessInfoLine3" placeholder="e.g., City, State 12345">
+        </div>
+        
+        <div class="input-group">
+          <label for="businessInfoLine4">Line 4</label>
+          <input type="text" id="businessInfoLine4" placeholder="e.g., Phone: (555) 123-4567">
+        </div>
+      </section>
+
+      <!-- Custom Header -->
+      <section class="settings-section locked">
+        <h2>Custom Header</h2>
+        <p class="section-description">Customize the header text. Use placeholders: {{greeting}}, {{date}}, {{userName}} (case-insensitive)</p>
+        
+        <div class="input-group">
+          <label for="customHeaderTitle">Header Title</label>
+          <input type="text" id="customHeaderTitle" placeholder="e.g., Welcome, {{greeting}}!">
+          <small>Use {{greeting}} (or {{Greeting}}) to insert the time-based greeting. Use {{userName}} to insert the team/user name.</small>
+        </div>
+        
+        <div class="input-group">
+          <label for="customHeaderText">Header Text</label>
+          <input type="text" id="customHeaderText" placeholder="e.g., Today is {{date}}">
+          <small>Use {{date}} (or {{Date}}) to insert the current date and time. Use {{userName}} to insert the team/user name.</small>
+        </div>
+      </section>
+
+      <!-- Dashboard Visibility -->
+      <section class="settings-section locked">
+        <h2>Dashboard Visibility</h2>
+        <p class="section-description">Control which cards are visible on the dashboard for all users</p>
+        
+        <div class="input-group">
+          <label class="toggle-label" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+            <span>Trackers Card</span>
+            <input type="checkbox" id="cardVisibilityTrackers" checked>
+            <span class="toggle-switch"></span>
+          </label>
+          <small style="display: block; margin-bottom: 1rem; color: #64748b;">Show or hide the Trackers card on the dashboard</small>
+        </div>
+        
+        <div class="input-group">
+          <label class="toggle-label" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+            <span>Notes Card</span>
+            <input type="checkbox" id="cardVisibilityNotes" checked>
+            <span class="toggle-switch"></span>
+          </label>
+          <small style="display: block; margin-bottom: 1rem; color: #64748b;">Show or hide the Notes card on the dashboard</small>
+        </div>
+        
+        <div class="input-group">
+          <label class="toggle-label" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+            <span>Quick Links Card</span>
+            <input type="checkbox" id="cardVisibilityLinks" checked>
+            <span class="toggle-switch"></span>
+          </label>
+          <small style="display: block; margin-bottom: 1rem; color: #64748b;">Show or hide the Quick Links card on the dashboard</small>
+        </div>
+        
+        <div class="input-group">
+          <label class="toggle-label" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+            <span>Todoist Card</span>
+            <input type="checkbox" id="cardVisibilityTodoist" checked>
+            <span class="toggle-switch"></span>
+          </label>
+          <small style="display: block; margin-bottom: 1rem; color: #64748b;">Show or hide the Todoist Today card on the dashboard</small>
         </div>
       </section>
 
@@ -173,6 +349,51 @@
         <div id="trackersManagement" class="trackers-management" style="display: none;">
           <button id="addTrackerBtn" class="add-tracker-btn">+ Add Tracker</button>
           <div class="trackers-list" id="trackersList"></div>
+        </div>
+      </section>
+
+      <!-- Quick Links Section -->
+      <section class="settings-section" id="linksSection">
+        <h2>Quick Links</h2>
+        <p class="section-description">Manage quick links that appear on the dashboard. Links can be added individually or in batch.</p>
+        
+        <div class="locked-message" id="linksLocked">
+          <p>🔒 Unlock settings above to manage links.</p>
+        </div>
+        
+        <div id="linksManagement" class="links-management" style="display: none;">
+          <div class="links-header">
+            <h3>Manage Quick Links</h3>
+            <div class="links-header-actions">
+              <button id="addLinkBtn" class="add-link-btn">+ Add Link</button>
+              <button id="batchAddLinkBtn" class="add-link-btn">+ Batch Add</button>
+            </div>
+          </div>
+          
+          <div id="linksList" class="admin-links-list">
+            <!-- Links will be loaded here -->
+          </div>
+        </div>
+      </section>
+
+      <!-- Notes Section -->
+      <section class="settings-section" id="notesSection">
+        <h2>Notes</h2>
+        <p class="section-description">Manage notes that appear on the dashboard.</p>
+        
+        <div class="locked-message" id="notesLocked">
+          <p>🔒 Unlock settings above to manage notes.</p>
+        </div>
+        
+        <div id="notesManagement" class="notes-management" style="display: none;">
+          <div class="notes-header">
+            <h3>Manage Notes</h3>
+            <button id="addNoteBtn" class="add-note-btn">+ Add Note</button>
+          </div>
+          
+          <div id="notesList" class="admin-notes-list">
+            <!-- Notes will be loaded here -->
+          </div>
         </div>
       </section>
 

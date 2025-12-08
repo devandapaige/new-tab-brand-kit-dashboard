@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Load brand colors and apply to settings page
 function loadBrandColors() {
-  chrome.storage.sync.get(['primaryColor', 'secondaryColor', 'accentColor'], (result) => {
+  chrome.storage.sync.get(['primaryColor', 'secondaryColor', 'accentColor', 'borderRadius'], (result) => {
     const root = document.documentElement;
     
     if (result.primaryColor) {
@@ -25,6 +25,12 @@ function loadBrandColors() {
     if (result.accentColor) {
       root.style.setProperty('--accent-color', result.accentColor);
     }
+    
+    // Apply border radius
+    const borderRadius = result.borderRadius !== undefined ? result.borderRadius : 8;
+    root.style.setProperty('--border-radius', `${borderRadius}px`);
+    root.style.setProperty('--border-radius-sm', `${Math.round(borderRadius * 0.75)}px`);
+    root.style.setProperty('--border-radius-lg', `${Math.round(borderRadius * 1.5)}px`);
   });
 }
 
@@ -38,10 +44,25 @@ function loadSettings() {
     'cardBackground',
     'textPrimary',
     'textSecondary',
-    'backgroundImage',
+    'textLight',
+    'borderColor',
+    'shadowIntensity',
+    'borderRadius',
     'userName',
     'todoistApiKey',
-    'countdowns'
+    'countdowns',
+    'cardVisibilityTrackers',
+    'cardVisibilityNotes',
+    'cardVisibilityLinks',
+    'cardVisibilityTodoist',
+    'overlayEnabled',
+    'overlayOpacity',
+    'customHeaderTitle',
+    'customHeaderText',
+    'businessInfoLine1',
+    'businessInfoLine2',
+    'businessInfoLine3',
+    'businessInfoLine4'
   ], (result) => {
     if (result.primaryColor) {
       document.getElementById('primaryColor').value = result.primaryColor;
@@ -69,6 +90,18 @@ function loadSettings() {
       const hex = rgbaToHex(result.cardBackground) || result.cardBackground;
       document.getElementById('cardBackground').value = hex;
       document.getElementById('cardBackgroundText').value = result.cardBackground;
+      
+      // Extract opacity from rgba value
+      const opacityMatch = result.cardBackground.match(/rgba?\([^)]+,\s*([\d.]+)\)/);
+      if (opacityMatch) {
+        const opacity = Math.round(parseFloat(opacityMatch[1]) * 100);
+        document.getElementById('cardBackgroundOpacity').value = opacity;
+        document.getElementById('cardBackgroundOpacityValue').textContent = opacity;
+      }
+    } else {
+      // Default to 95% if not set
+      document.getElementById('cardBackgroundOpacity').value = 95;
+      document.getElementById('cardBackgroundOpacityValue').textContent = '95';
     }
     
     if (result.textPrimary) {
@@ -81,9 +114,60 @@ function loadSettings() {
       document.getElementById('textSecondaryText').value = result.textSecondary;
     }
     
-    if (result.backgroundImage) {
-      document.getElementById('backgroundImage').value = result.backgroundImage;
+    if (result.textLight) {
+      document.getElementById('textLight').value = result.textLight;
+      document.getElementById('textLightText').value = result.textLight;
     }
+    
+    if (result.borderColor) {
+      const hex = rgbaToHex(result.borderColor) || result.borderColor;
+      document.getElementById('borderColor').value = hex;
+      document.getElementById('borderColorText').value = result.borderColor;
+      
+      // Extract opacity from rgba value
+      const opacityMatch = result.borderColor.match(/rgba?\([^)]+,\s*([\d.]+)\)/);
+      if (opacityMatch) {
+        const opacity = Math.round(parseFloat(opacityMatch[1]) * 100);
+        document.getElementById('borderColorOpacity').value = opacity;
+        document.getElementById('borderColorOpacityValue').textContent = opacity;
+      }
+    } else {
+      // Default to 50% if not set
+      document.getElementById('borderColorOpacity').value = 50;
+      document.getElementById('borderColorOpacityValue').textContent = '50';
+    }
+    
+    if (result.shadowIntensity !== undefined) {
+      document.getElementById('shadowIntensity').value = result.shadowIntensity;
+      document.getElementById('shadowIntensityValue').textContent = result.shadowIntensity;
+    } else {
+      // Default to 15% if not set
+      document.getElementById('shadowIntensity').value = 15;
+      document.getElementById('shadowIntensityValue').textContent = '15';
+    }
+    
+    if (result.borderRadius !== undefined) {
+      document.getElementById('borderRadius').value = result.borderRadius;
+      document.getElementById('borderRadiusValue').textContent = result.borderRadius;
+    } else {
+      // Default to 8px if not set
+      document.getElementById('borderRadius').value = 8;
+      document.getElementById('borderRadiusValue').textContent = '8';
+    }
+    
+    // Load background image from local storage (it's stored there because it can be large)
+    chrome.storage.local.get(['backgroundImage'], (localResult) => {
+      if (localResult.backgroundImage) {
+        document.getElementById('backgroundImage').value = localResult.backgroundImage;
+        updateBackgroundImagePreview();
+      } else {
+        // Fallback: check sync storage for backwards compatibility
+        if (result.backgroundImage) {
+          document.getElementById('backgroundImage').value = result.backgroundImage;
+          updateBackgroundImagePreview();
+        }
+      }
+    });
     
     if (result.userName) {
       document.getElementById('userName').value = result.userName;
@@ -92,6 +176,85 @@ function loadSettings() {
     if (result.todoistApiKey) {
       document.getElementById('todoistApiKey').value = result.todoistApiKey;
     }
+    
+    // Load custom header
+    if (result.customHeaderTitle) {
+      document.getElementById('customHeaderTitle').value = result.customHeaderTitle;
+    }
+    
+    if (result.customHeaderText) {
+      document.getElementById('customHeaderText').value = result.customHeaderText;
+    }
+    
+    // Load business info
+    if (result.businessInfoLine1) {
+      document.getElementById('businessInfoLine1').value = result.businessInfoLine1;
+    }
+    if (result.businessInfoLine2) {
+      document.getElementById('businessInfoLine2').value = result.businessInfoLine2;
+    }
+    if (result.businessInfoLine3) {
+      document.getElementById('businessInfoLine3').value = result.businessInfoLine3;
+    }
+    if (result.businessInfoLine4) {
+      document.getElementById('businessInfoLine4').value = result.businessInfoLine4;
+    }
+    
+    // Load company logo from local storage
+    chrome.storage.local.get(['companyLogo'], (localResult) => {
+      if (localResult.companyLogo) {
+        document.getElementById('companyLogo').value = localResult.companyLogo;
+        updateCompanyLogoPreview();
+      }
+    });
+    
+    // Load card visibility settings
+    if (result.cardVisibilityTrackers !== undefined) {
+      document.getElementById('cardVisibilityTrackers').checked = result.cardVisibilityTrackers;
+    } else {
+      document.getElementById('cardVisibilityTrackers').checked = true; // Default to visible
+    }
+    
+    if (result.cardVisibilityNotes !== undefined) {
+      document.getElementById('cardVisibilityNotes').checked = result.cardVisibilityNotes;
+    } else {
+      document.getElementById('cardVisibilityNotes').checked = true; // Default to visible
+    }
+    
+    if (result.cardVisibilityLinks !== undefined) {
+      document.getElementById('cardVisibilityLinks').checked = result.cardVisibilityLinks;
+    } else {
+      document.getElementById('cardVisibilityLinks').checked = true; // Default to visible
+    }
+    
+    if (result.cardVisibilityTodoist !== undefined) {
+      document.getElementById('cardVisibilityTodoist').checked = result.cardVisibilityTodoist;
+    } else {
+      document.getElementById('cardVisibilityTodoist').checked = true; // Default to visible
+    }
+    
+    // Load overlay settings
+    if (result.overlayEnabled !== undefined) {
+      document.getElementById('overlayEnabled').checked = result.overlayEnabled;
+    } else {
+      document.getElementById('overlayEnabled').checked = true; // Default to enabled
+    }
+    
+    if (result.overlayOpacity !== undefined) {
+      document.getElementById('overlayOpacity').value = result.overlayOpacity;
+      document.getElementById('overlayOpacityValue').textContent = result.overlayOpacity;
+    } else {
+      document.getElementById('overlayOpacity').value = 20; // Default to 20%
+      document.getElementById('overlayOpacityValue').textContent = '20';
+    }
+    
+    // Update overlay controls visibility and update background color opacity
+    updateOverlayControls();
+    updateBackgroundColorOpacity();
+    // Update card background opacity
+    updateCardBackgroundOpacity();
+    // Update border color opacity
+    updateBorderColorOpacity();
   });
 }
 
@@ -124,6 +287,14 @@ function initializeColorPickers() {
   // Text Secondary
   syncColorPicker('textSecondary', 'textSecondaryText');
   syncColorText('textSecondaryText', 'textSecondary');
+  
+  // Text Light
+  syncColorPicker('textLight', 'textLightText');
+  syncColorText('textLightText', 'textLight');
+  
+  // Border Color
+  syncColorPicker('borderColor', 'borderColorText', true);
+  syncColorText('borderColorText', 'borderColor', true);
 }
 
 function syncColorPicker(pickerId, textId, isRgba = false) {
@@ -184,6 +355,16 @@ function syncColorText(textId, pickerId, isRgba = false) {
   });
 }
 
+// Convert hex to RGB
+function hexToRgb(hex) {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : null;
+}
+
 // Convert hex to rgba
 function hexToRgba(hex, alpha = 1) {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -236,6 +417,218 @@ function initializeFormHandlers() {
   
   // Import file handler
   document.getElementById('importFile').addEventListener('change', importSettings);
+  
+  // Background image upload handler
+  const backgroundImageUpload = document.getElementById('backgroundImageUpload');
+  if (backgroundImageUpload) {
+    backgroundImageUpload.addEventListener('change', handleBackgroundImageUpload);
+  }
+  
+  // Clear background image button
+  const clearBackgroundImage = document.getElementById('clearBackgroundImage');
+  if (clearBackgroundImage) {
+    clearBackgroundImage.addEventListener('click', () => {
+      document.getElementById('backgroundImage').value = '';
+      document.getElementById('backgroundImageUpload').value = '';
+      document.getElementById('backgroundImagePreview').style.display = 'none';
+      document.getElementById('backgroundImagePreviewImg').src = '';
+      // Clear from local storage
+      chrome.storage.local.remove('backgroundImage');
+    });
+  }
+  
+  // Update preview when URL changes
+  const backgroundImageInput = document.getElementById('backgroundImage');
+  if (backgroundImageInput) {
+    backgroundImageInput.addEventListener('input', updateBackgroundImagePreview);
+  }
+  
+  // Company logo upload handler
+  const companyLogoUpload = document.getElementById('companyLogoUpload');
+  if (companyLogoUpload) {
+    companyLogoUpload.addEventListener('change', handleCompanyLogoUpload);
+  }
+  
+  // Clear company logo button
+  const clearCompanyLogo = document.getElementById('clearCompanyLogo');
+  if (clearCompanyLogo) {
+    clearCompanyLogo.addEventListener('click', () => {
+      document.getElementById('companyLogo').value = '';
+      document.getElementById('companyLogoUpload').value = '';
+      document.getElementById('companyLogoPreview').style.display = 'none';
+      document.getElementById('companyLogoPreviewImg').src = '';
+      // Clear from local storage
+      chrome.storage.local.remove('companyLogo');
+    });
+  }
+  
+  // Overlay enabled toggle
+  const overlayEnabled = document.getElementById('overlayEnabled');
+  if (overlayEnabled) {
+    overlayEnabled.addEventListener('change', () => {
+      updateOverlayControls();
+      updateBackgroundColorOpacity();
+    });
+  }
+  
+  // Overlay opacity slider
+  const overlayOpacity = document.getElementById('overlayOpacity');
+  if (overlayOpacity) {
+    overlayOpacity.addEventListener('input', (e) => {
+      document.getElementById('overlayOpacityValue').textContent = e.target.value;
+      updateBackgroundColorOpacity();
+    });
+  }
+  
+  // Update background color when color picker changes (to update opacity)
+  const backgroundColorPicker = document.getElementById('backgroundColor');
+  if (backgroundColorPicker) {
+    backgroundColorPicker.addEventListener('input', updateBackgroundColorOpacity);
+  }
+  
+  const backgroundColorText = document.getElementById('backgroundColorText');
+  if (backgroundColorText) {
+    backgroundColorText.addEventListener('input', updateBackgroundColorOpacity);
+  }
+  
+  // Card background opacity slider
+  const cardBackgroundOpacity = document.getElementById('cardBackgroundOpacity');
+  if (cardBackgroundOpacity) {
+    cardBackgroundOpacity.addEventListener('input', (e) => {
+      document.getElementById('cardBackgroundOpacityValue').textContent = e.target.value;
+      updateCardBackgroundOpacity();
+    });
+  }
+  
+  // Update card background color when color picker changes (to update opacity)
+  const cardBackgroundPicker = document.getElementById('cardBackground');
+  if (cardBackgroundPicker) {
+    cardBackgroundPicker.addEventListener('input', updateCardBackgroundOpacity);
+  }
+  
+  const cardBackgroundText = document.getElementById('cardBackgroundText');
+  if (cardBackgroundText) {
+    cardBackgroundText.addEventListener('input', updateCardBackgroundOpacity);
+  }
+  
+  // Shadow intensity slider
+  const shadowIntensity = document.getElementById('shadowIntensity');
+  if (shadowIntensity) {
+    shadowIntensity.addEventListener('input', (e) => {
+      document.getElementById('shadowIntensityValue').textContent = e.target.value;
+    });
+  }
+  
+  // Border radius slider
+  const borderRadius = document.getElementById('borderRadius');
+  if (borderRadius) {
+    borderRadius.addEventListener('input', (e) => {
+      document.getElementById('borderRadiusValue').textContent = e.target.value;
+    });
+  }
+  
+  // Border color opacity slider
+  const borderColorOpacity = document.getElementById('borderColorOpacity');
+  if (borderColorOpacity) {
+    borderColorOpacity.addEventListener('input', (e) => {
+      document.getElementById('borderColorOpacityValue').textContent = e.target.value;
+      updateBorderColorOpacity();
+    });
+  }
+  
+  // Update border color when color picker changes (to update opacity)
+  const borderColorPicker = document.getElementById('borderColor');
+  if (borderColorPicker) {
+    borderColorPicker.addEventListener('input', updateBorderColorOpacity);
+  }
+  
+  const borderColorText = document.getElementById('borderColorText');
+  if (borderColorText) {
+    borderColorText.addEventListener('input', updateBorderColorOpacity);
+  }
+}
+
+// Update border color opacity based on opacity slider
+function updateBorderColorOpacity() {
+  const borderColorOpacity = document.getElementById('borderColorOpacity');
+  const borderColorPicker = document.getElementById('borderColor');
+  const borderColorText = document.getElementById('borderColorText');
+  
+  if (!borderColorOpacity || !borderColorPicker || !borderColorText) return;
+  
+  // Get the opacity value (0-100, convert to 0-1)
+  const opacity = parseInt(borderColorOpacity.value) / 100;
+  
+  // Get the base color from the color picker
+  const hexColor = borderColorPicker.value;
+  const rgb = hexToRgb(hexColor);
+  
+  if (rgb) {
+    // Update the text input with the new rgba value
+    const rgbaValue = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
+    borderColorText.value = rgbaValue;
+  }
+}
+
+// Update card background color opacity based on opacity slider
+function updateCardBackgroundOpacity() {
+  const cardBackgroundOpacity = document.getElementById('cardBackgroundOpacity');
+  const cardBackgroundPicker = document.getElementById('cardBackground');
+  const cardBackgroundText = document.getElementById('cardBackgroundText');
+  
+  if (!cardBackgroundOpacity || !cardBackgroundPicker || !cardBackgroundText) return;
+  
+  // Get the opacity value (0-100, convert to 0-1)
+  const opacity = parseInt(cardBackgroundOpacity.value) / 100;
+  
+  // Get the base color from the color picker
+  const hexColor = cardBackgroundPicker.value;
+  const rgb = hexToRgb(hexColor);
+  
+  if (rgb) {
+    // Update the text input with the new rgba value
+    const rgbaValue = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
+    cardBackgroundText.value = rgbaValue;
+  }
+}
+
+// Update overlay controls visibility based on enabled state
+function updateOverlayControls() {
+  const overlayEnabled = document.getElementById('overlayEnabled');
+  const overlayControls = document.getElementById('overlayControls');
+  
+  if (overlayEnabled && overlayControls) {
+    if (overlayEnabled.checked) {
+      overlayControls.style.opacity = '1';
+      overlayControls.style.pointerEvents = 'auto';
+    } else {
+      overlayControls.style.opacity = '0.5';
+      overlayControls.style.pointerEvents = 'none';
+    }
+  }
+}
+
+// Update background color opacity based on overlay opacity slider
+function updateBackgroundColorOpacity() {
+  const overlayEnabled = document.getElementById('overlayEnabled');
+  const overlayOpacity = document.getElementById('overlayOpacity');
+  const backgroundColorPicker = document.getElementById('backgroundColor');
+  const backgroundColorText = document.getElementById('backgroundColorText');
+  
+  if (!overlayEnabled || !overlayOpacity || !backgroundColorPicker || !backgroundColorText) return;
+  
+  // Get the opacity value (0-100, convert to 0-1)
+  const opacity = overlayEnabled.checked ? (parseInt(overlayOpacity.value) / 100) : 0;
+  
+  // Get the base color from the color picker
+  const hexColor = backgroundColorPicker.value;
+  const rgb = hexToRgb(hexColor);
+  
+  if (rgb) {
+    // Update the text input with the new rgba value
+    const rgbaValue = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
+    backgroundColorText.value = rgbaValue;
+  }
 }
 
 // Initialize admin section
@@ -272,9 +665,36 @@ function initializeAdminSection() {
   });
   
   // Add response button
-  document.getElementById('addResponseBtn').addEventListener('click', () => {
-    openResponseModal();
-  });
+  const addResponseBtn = document.getElementById('addResponseBtn');
+  if (addResponseBtn) {
+    addResponseBtn.addEventListener('click', () => {
+      openResponseModal();
+    });
+  }
+  
+  // Add link button
+  const addLinkBtn = document.getElementById('addLinkBtn');
+  if (addLinkBtn) {
+    addLinkBtn.addEventListener('click', () => {
+      openLinkModal();
+    });
+  }
+  
+  // Batch add link button
+  const batchAddLinkBtn = document.getElementById('batchAddLinkBtn');
+  if (batchAddLinkBtn) {
+    batchAddLinkBtn.addEventListener('click', () => {
+      openBatchLinkModal();
+    });
+  }
+  
+  // Add note button
+  const addNoteBtn = document.getElementById('addNoteBtn');
+  if (addNoteBtn) {
+    addNoteBtn.addEventListener('click', () => {
+      openNoteModal();
+    });
+  }
 }
 
 // Load admin state
@@ -318,9 +738,11 @@ function loadAdminState() {
     // Lock/unlock all settings
     toggleSettingsLock(!isUnlocked);
     
-    // Load responses if unlocked
+    // Load admin data if unlocked
     if (isUnlocked) {
       loadAdminResponses();
+      loadLinks();
+      loadNotes();
     }
   });
 }
@@ -353,6 +775,32 @@ function toggleSettingsLock(locked) {
   } else {
     document.getElementById('trackersLocked').style.display = 'none';
     document.getElementById('trackersManagement').style.display = 'block';
+  }
+  
+  // Show/hide links management
+  const linksLocked = document.getElementById('linksLocked');
+  const linksManagement = document.getElementById('linksManagement');
+  if (linksLocked && linksManagement) {
+    if (locked) {
+      linksLocked.style.display = 'block';
+      linksManagement.style.display = 'none';
+    } else {
+      linksLocked.style.display = 'none';
+      linksManagement.style.display = 'block';
+    }
+  }
+  
+  // Show/hide notes management
+  const notesLocked = document.getElementById('notesLocked');
+  const notesManagement = document.getElementById('notesManagement');
+  if (notesLocked && notesManagement) {
+    if (locked) {
+      notesLocked.style.display = 'block';
+      notesManagement.style.display = 'none';
+    } else {
+      notesLocked.style.display = 'none';
+      notesManagement.style.display = 'block';
+    }
   }
   
   // Disable/enable all action buttons
@@ -633,6 +1081,21 @@ function saveSettings(callback) {
       return;
     }
     
+    const backgroundImageValue = document.getElementById('backgroundImage').value;
+    const overlayOpacityEl = document.getElementById('overlayOpacity');
+    const overlayEnabledEl = document.getElementById('overlayEnabled');
+    
+    // Update background color opacity before saving
+    updateBackgroundColorOpacity();
+    // Update card background color opacity before saving
+    updateCardBackgroundOpacity();
+    // Update border color opacity before saving
+    updateBorderColorOpacity();
+    
+    const companyLogoValue = document.getElementById('companyLogo').value;
+    
+    const shadowIntensityEl = document.getElementById('shadowIntensity');
+    
     const settings = {
       primaryColor: document.getElementById('primaryColor').value,
       secondaryColor: document.getElementById('secondaryColor').value,
@@ -641,17 +1104,60 @@ function saveSettings(callback) {
       cardBackground: document.getElementById('cardBackgroundText').value,
       textPrimary: document.getElementById('textPrimary').value,
       textSecondary: document.getElementById('textSecondary').value,
-    backgroundImage: document.getElementById('backgroundImage').value,
-    userName: document.getElementById('userName').value,
-    todoistApiKey: document.getElementById('todoistApiKey').value
+      textLight: document.getElementById('textLightText').value,
+      borderColor: document.getElementById('borderColorText').value,
+      shadowIntensity: shadowIntensityEl ? parseInt(shadowIntensityEl.value) : 15,
+      borderRadius: document.getElementById('borderRadius') ? parseInt(document.getElementById('borderRadius').value) : 8,
+      backgroundImage: backgroundImageValue,
+      userName: document.getElementById('userName').value,
+      todoistApiKey: document.getElementById('todoistApiKey').value,
+      cardVisibilityTrackers: document.getElementById('cardVisibilityTrackers').checked,
+      cardVisibilityNotes: document.getElementById('cardVisibilityNotes').checked,
+      cardVisibilityLinks: document.getElementById('cardVisibilityLinks').checked,
+      cardVisibilityTodoist: document.getElementById('cardVisibilityTodoist').checked,
+      overlayEnabled: overlayEnabledEl ? overlayEnabledEl.checked : true,
+      overlayOpacity: overlayOpacityEl ? parseInt(overlayOpacityEl.value) : 20,
+      customHeaderTitle: document.getElementById('customHeaderTitle').value.trim(),
+      customHeaderText: document.getElementById('customHeaderText').value.trim(),
+      businessInfoLine1: document.getElementById('businessInfoLine1').value.trim(),
+      businessInfoLine2: document.getElementById('businessInfoLine2').value.trim(),
+      businessInfoLine3: document.getElementById('businessInfoLine3').value.trim(),
+      businessInfoLine4: document.getElementById('businessInfoLine4').value.trim()
     };
     
-    chrome.storage.sync.set(settings, () => {
-      showStatus('Settings saved successfully!', 'success');
-      
-      if (callback) {
-        setTimeout(callback, 500);
-      }
+    // Remove backgroundImage from sync settings (it's too large for sync storage)
+    const { backgroundImage, ...syncSettings } = settings;
+    
+    // Save background image to local storage (supports up to 10MB per item)
+    const backgroundImagePromise = backgroundImageValue && backgroundImageValue.trim()
+      ? chrome.storage.local.set({ backgroundImage: backgroundImageValue })
+      : chrome.storage.local.remove('backgroundImage');
+    
+    // Save company logo to local storage
+    const companyLogoPromise = companyLogoValue && companyLogoValue.trim()
+      ? chrome.storage.local.set({ companyLogo: companyLogoValue })
+      : chrome.storage.local.remove('companyLogo');
+    
+    // Save other settings to sync storage
+    chrome.storage.sync.set(syncSettings, () => {
+      // Save background image and logo to local storage
+      Promise.all([backgroundImagePromise, companyLogoPromise]).then(() => {
+        // Reload brand colors to apply border-radius and other changes immediately
+        loadBrandColors();
+        showStatus('Settings saved successfully!', 'success');
+        
+        // Call callback directly if provided (avoid setTimeout to prevent CSP issues)
+        if (callback && typeof callback === 'function') {
+          callback();
+        }
+      }).catch((error) => {
+        console.error('Error saving images to local storage:', error);
+        showStatus('Settings saved, but some images failed to save. Images may be too large.', 'error');
+        
+        if (callback && typeof callback === 'function') {
+          callback();
+        }
+      });
     });
   });
 }
@@ -673,18 +1179,31 @@ function resetSettings() {
         primaryColor: '#4A90E2',
         secondaryColor: '#50C878',
         accentColor: '#FF6B6B',
-        backgroundColor: 'rgba(15, 23, 42, 0.85)',
+        backgroundColor: 'rgba(15, 23, 42, 0.2)',
         cardBackground: 'rgba(255, 255, 255, 0.95)',
         textPrimary: '#1E293B',
         textSecondary: '#64748B',
-      backgroundImage: '',
-      userName: 'Team',
-      todoistApiKey: ''
+        textLight: '#FFFFFF',
+        borderColor: 'rgba(226, 232, 240, 0.5)',
+        shadowIntensity: 15,
+        borderRadius: 8,
+        backgroundImage: '',
+        userName: 'Team',
+        todoistApiKey: '',
+        cardVisibilityTrackers: true,
+        cardVisibilityNotes: true,
+        cardVisibilityLinks: true,
+        cardVisibilityTodoist: true,
+        overlayEnabled: true,
+        overlayOpacity: 20
       };
       
       chrome.storage.sync.set(defaults, () => {
-        loadSettings();
-        showStatus('Settings reset to defaults!', 'success');
+        // Clear background image from local storage
+        chrome.storage.local.remove('backgroundImage', () => {
+          loadSettings();
+          showStatus('Settings reset to defaults!', 'success');
+        });
       });
     }
   });
@@ -917,6 +1436,12 @@ function createCountdownItem(countdown, index) {
       <label>Pin to Dashboard:</label>
       <div>${countdown.pinnedToDashboard !== false ? '✅ Yes' : '❌ No'}</div>
     </div>
+    ${countdown.url ? `
+    <div class="response-item-field">
+      <label>Link URL:</label>
+      <div style="color: #64748b; word-break: break-all;">${escapeHtml(countdown.url)}</div>
+    </div>
+    ` : ''}
   `;
   
   // Edit button
@@ -1025,6 +1550,12 @@ function openCountdownModal(countdown = null, index = null) {
             </label>
           </div>
           
+          <div class="input-group">
+            <label for="countdownUrl">Link URL (Optional)</label>
+            <input type="url" id="countdownUrl" placeholder="https://example.com">
+            <small>If provided, clicking the tracker on the dashboard will open this URL</small>
+          </div>
+          
           <input type="hidden" id="countdownId">
           <div class="button-group-inline" style="margin-top: 1rem;">
             <button type="submit" class="save-settings-btn" style="flex: 1;">${countdown ? 'Update' : 'Add'} Countdown</button>
@@ -1099,6 +1630,7 @@ function openCountdownModal(countdown = null, index = null) {
     
     document.getElementById('selectedIcon').textContent = countdown.icon || '⏰';
     document.getElementById('countdownPinned').checked = countdown.pinnedToDashboard !== false;
+    document.getElementById('countdownUrl').value = countdown.url || '';
     
     // Update modal title
     modal.querySelector('h3').textContent = 'Edit Countdown';
@@ -1136,10 +1668,16 @@ function saveCountdown() {
   const icon = document.getElementById('selectedIcon').textContent;
   const pinned = document.getElementById('countdownPinned').checked;
   const id = document.getElementById('countdownId').value;
+  let url = document.getElementById('countdownUrl').value.trim();
   
   if (!name || isNaN(month) || isNaN(day) || isNaN(year)) {
     showStatus('Please fill in all required fields', 'error');
     return;
+  }
+  
+  // Add https:// if URL doesn't start with http:// or https://
+  if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
+    url = 'https://' + url;
   }
   
   // Create date from inputs
@@ -1157,6 +1695,10 @@ function saveCountdown() {
       icon,
       pinnedToDashboard: pinned
     };
+    
+    if (url) {
+      countdownData.url = url;
+    }
     
     if (id !== '') {
       // Edit existing
@@ -1190,5 +1732,687 @@ function deleteCountdown(index) {
   });
 }
 
+// Links Management
+function loadLinks() {
+  chrome.storage.sync.get(['links', 'adminUnlocked'], (result) => {
+    if (!result.adminUnlocked) {
+      return;
+    }
+    
+    const links = result.links || [];
+    const list = document.getElementById('linksList');
+    if (!list) return;
+    
+    list.innerHTML = '';
+    
+    if (links.length === 0) {
+      list.innerHTML = '<p style="color: #64748b; text-align: center; padding: 2rem;">No links yet. Click "Add Link" to create one.</p>';
+      return;
+    }
+    
+    links.forEach((link, index) => {
+      const item = createLinkItem(link, index);
+      list.appendChild(item);
+    });
+  });
+}
 
+function createLinkItem(link, index) {
+  const div = document.createElement('div');
+  div.className = 'admin-link-item';
+  div.setAttribute('data-index', index);
+  
+  const icon = link.icon || (link.name ? link.name.charAt(0).toUpperCase() : '🔗');
+  
+  // Handle both old format (single URL) and new format (array of URLs)
+  const urls = link.urls || (link.url ? [link.url] : []);
+  const urlDisplay = urls.length > 1 
+    ? `${urls.length} URLs (${urls.slice(0, 2).map(u => new URL(u).hostname).join(', ')}${urls.length > 2 ? '...' : ''})`
+    : (urls[0] || 'No URL');
+  
+  div.innerHTML = `
+    <div class="link-item-header">
+      <div class="link-item-icon">${icon}</div>
+      <div class="link-item-info">
+        <div class="link-item-name">${escapeHtml(link.name)}</div>
+        <div class="link-item-url">${escapeHtml(urlDisplay)}</div>
+      </div>
+      <div class="link-item-actions">
+        <button class="link-item-btn edit-btn" data-action="edit" data-index="${index}">Edit</button>
+        <button class="link-item-btn delete-btn-admin" data-action="delete" data-index="${index}">Delete</button>
+      </div>
+    </div>
+  `;
+  
+  // Edit button
+  div.querySelector('[data-action="edit"]').addEventListener('click', () => {
+    openLinkModal(link, index);
+  });
+  
+  // Delete button
+  div.querySelector('[data-action="delete"]').addEventListener('click', () => {
+    if (confirm(`Delete "${link.name}"?`)) {
+      deleteLink(index);
+    }
+  });
+  
+  return div;
+}
+
+function openLinkModal(link = null, index = null) {
+  // Create modal if it doesn't exist
+  let modal = document.getElementById('linkModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'linkModal';
+    modal.className = 'response-modal';
+    modal.innerHTML = `
+      <div class="response-modal-content">
+        <span class="response-modal-close" id="closeLinkModal">&times;</span>
+        <h3>${link ? 'Edit Link' : 'Add Link'}</h3>
+        <form id="linkForm">
+          <div class="input-group">
+            <label for="linkName">Name *</label>
+            <input type="text" id="linkName" required placeholder="e.g., Newsletter">
+          </div>
+          <div class="input-group">
+            <label>URLs * <small style="font-weight: normal; color: #64748b;">(Clicking this link will open all URLs in new tabs)</small></label>
+            <div id="linkUrlsContainer">
+              <!-- URL inputs will be added here -->
+            </div>
+            <button type="button" id="addUrlBtn" class="reset-btn" style="margin-top: 0.5rem; padding: 0.5rem 1rem;">+ Add Another URL</button>
+            <small>Add multiple URLs to open them all when clicking this link (e.g., beehiiv, Canva template, Notion doc)</small>
+          </div>
+          <div class="input-group">
+            <label for="linkIcon">Icon (Optional)</label>
+            <input type="text" id="linkIcon" placeholder="🔗 or leave empty for first letter" maxlength="2">
+            <small>Enter an emoji or leave empty to use the first letter of the link name</small>
+          </div>
+          <div class="button-group-inline" style="margin-top: 1rem;">
+            <button type="submit" class="save-settings-btn" style="flex: 1;">${link ? 'Update' : 'Add'} Link</button>
+            <button type="button" class="reset-btn" id="cancelLinkBtn">Cancel</button>
+          </div>
+        </form>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    
+    // Close handlers
+    document.getElementById('closeLinkModal').addEventListener('click', () => {
+      modal.classList.remove('active');
+    });
+    
+    document.getElementById('cancelLinkBtn').addEventListener('click', () => {
+      modal.classList.remove('active');
+    });
+    
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.classList.remove('active');
+      }
+    });
+    
+    // Form submit
+    document.getElementById('linkForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      saveLink(index);
+    });
+    
+    // Add URL button handler
+    document.getElementById('addUrlBtn').addEventListener('click', () => {
+      addUrlInput();
+    });
+  }
+  
+  // Initialize URL inputs container
+  const urlsContainer = document.getElementById('linkUrlsContainer');
+  urlsContainer.innerHTML = '';
+  
+  // Populate form if editing
+  if (link) {
+    document.getElementById('linkName').value = link.name;
+    document.getElementById('linkIcon').value = link.icon || '';
+    
+    // Handle both old format (single URL) and new format (array of URLs)
+    const urls = link.urls || (link.url ? [link.url] : ['']);
+    urls.forEach((url, urlIndex) => {
+      addUrlInput(url, urlIndex === urls.length - 1);
+    });
+  } else {
+    document.getElementById('linkForm').reset();
+    // Add one empty URL input by default
+    addUrlInput();
+  }
+  
+  modal.classList.add('active');
+  document.getElementById('linkName').focus();
+}
+
+// Add a URL input field
+function addUrlInput(value = '', isLast = true) {
+  const container = document.getElementById('linkUrlsContainer');
+  const urlIndex = container.children.length;
+  const urlDiv = document.createElement('div');
+  urlDiv.className = 'url-input-wrapper';
+  urlDiv.style.display = 'flex';
+  urlDiv.style.gap = '0.5rem';
+  urlDiv.style.marginBottom = '0.5rem';
+  urlDiv.style.alignItems = 'center';
+  
+  // Escape value for HTML attribute (escape quotes)
+  const escapedValue = value.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  
+  urlDiv.innerHTML = `
+    <input type="url" class="link-url-input" placeholder="https://example.com" value="${escapedValue}" style="flex: 1; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: var(--border-radius-sm);">
+    ${urlIndex > 0 ? '<button type="button" class="remove-url-btn" style="padding: 0.5rem 1rem; background: #ef4444; color: white; border: none; border-radius: var(--border-radius-sm); cursor: pointer;">Remove</button>' : ''}
+  `;
+  
+  container.appendChild(urlDiv);
+  
+  // Remove button handler
+  const removeBtn = urlDiv.querySelector('.remove-url-btn');
+  if (removeBtn) {
+    removeBtn.addEventListener('click', () => {
+      urlDiv.remove();
+    });
+  }
+}
+
+function saveLink(index) {
+  const name = document.getElementById('linkName').value.trim();
+  const icon = document.getElementById('linkIcon').value.trim();
+  
+  // Get all URL inputs
+  const urlInputs = document.querySelectorAll('.link-url-input');
+  const urls = Array.from(urlInputs)
+    .map(input => input.value.trim())
+    .filter(url => url.length > 0);
+  
+  if (!name) {
+    showStatus('Name is required!', 'error');
+    return;
+  }
+  
+  if (urls.length === 0) {
+    showStatus('At least one URL is required!', 'error');
+    return;
+  }
+  
+  // Normalize URLs (add https:// if missing)
+  const normalizedUrls = urls.map(url => {
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      return 'https://' + url;
+    }
+    return url;
+  });
+  
+  chrome.storage.sync.get(['links'], (result) => {
+    const links = result.links || [];
+    
+    const linkData = { name, urls: normalizedUrls };
+    if (icon) {
+      linkData.icon = icon;
+    }
+    
+    if (index !== null) {
+      links[index] = linkData;
+    } else {
+      links.push(linkData);
+    }
+    
+    chrome.storage.sync.set({ links }, () => {
+      loadLinks();
+      document.getElementById('linkModal').classList.remove('active');
+      showStatus(`Link ${index !== null ? 'updated' : 'added'} successfully!`, 'success');
+    });
+  });
+}
+
+function deleteLink(index) {
+  chrome.storage.sync.get(['links'], (result) => {
+    const links = result.links || [];
+    links.splice(index, 1);
+    chrome.storage.sync.set({ links }, () => {
+      loadLinks();
+      showStatus('Link deleted successfully!', 'success');
+    });
+  });
+}
+
+function openBatchLinkModal() {
+  // Create modal if it doesn't exist
+  let modal = document.getElementById('batchLinkModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'batchLinkModal';
+    modal.className = 'response-modal';
+    modal.innerHTML = `
+      <div class="response-modal-content" style="max-width: 600px;">
+        <span class="response-modal-close" id="closeBatchLinkModal">&times;</span>
+        <h3>Batch Add Links</h3>
+        <form id="batchLinkForm">
+          <div class="input-group">
+            <label>Instructions</label>
+            <div style="background: rgba(0,0,0,0.05); padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid var(--primary-color);">
+              <p style="color: #64748b; font-size: 0.875rem; margin-bottom: 0.5rem;">
+                Add multiple links at once. Enter one link per line in the format:
+              </p>
+              <p style="font-weight: 600; margin-bottom: 0.5rem;">Name | URL(s) | Icon (optional)</p>
+              <p style="color: #64748b; font-size: 0.875rem; margin-top: 0.5rem;">
+                For multiple URLs per link, separate them with commas. All URLs will open when clicking the link.
+              </p>
+              <p style="color: #64748b; font-size: 0.875rem; margin-top: 0.5rem;">Examples:</p>
+              <code style="background: rgba(0,0,0,0.1); padding: 0.5rem; border-radius: 4px; display: block; font-family: monospace; font-size: 0.8rem; white-space: pre-wrap; margin-top: 0.5rem;">
+Google | https://google.com | 🔍
+Newsletter | https://beehiiv.com,https://canva.com/template,https://notion.so/doc | 📧
+GitHub | https://github.com
+Twitter | https://twitter.com | 🐦</code>
+            </div>
+          </div>
+          <div class="input-group">
+            <label for="batchLinksInput">Links *</label>
+            <textarea id="batchLinksInput" required rows="10" placeholder="Link One | https://example.com | 🔗&#10;Newsletter | https://beehiiv.com,https://canva.com/template,https://notion.so/doc | 📧&#10;Link Three | https://example3.com | ⭐" style="font-family: monospace; font-size: 0.9rem;"></textarea>
+          </div>
+          <div class="button-group-inline" style="margin-top: 1rem;">
+            <button type="submit" class="save-settings-btn" style="flex: 1;">Add All Links</button>
+            <button type="button" class="reset-btn" id="cancelBatchLinkBtn">Cancel</button>
+          </div>
+        </form>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    
+    // Close handlers
+    document.getElementById('closeBatchLinkModal').addEventListener('click', () => {
+      modal.classList.remove('active');
+    });
+    
+    document.getElementById('cancelBatchLinkBtn').addEventListener('click', () => {
+      modal.classList.remove('active');
+    });
+    
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.classList.remove('active');
+      }
+    });
+    
+    // Form submit
+    document.getElementById('batchLinkForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      saveBatchLinks();
+    });
+  }
+  
+  document.getElementById('batchLinksInput').value = '';
+  modal.classList.add('active');
+  document.getElementById('batchLinksInput').focus();
+}
+
+function saveBatchLinks() {
+  const batchInput = document.getElementById('batchLinksInput').value.trim();
+  if (!batchInput) {
+    showStatus('Please enter at least one link.', 'error');
+    return;
+  }
+  
+  const lines = batchInput.split('\n').filter(line => line.trim());
+  const newLinks = [];
+  
+  lines.forEach((line, index) => {
+    const parts = line.split('|').map(part => part.trim());
+    
+    if (parts.length < 2) {
+      console.warn(`Skipping invalid line ${index + 1}: ${line}`);
+      return;
+    }
+    
+    const name = parts[0];
+    const urlsString = parts[1];
+    const icon = parts[2] || '';
+    
+    if (!name || !urlsString) {
+      console.warn(`Skipping line ${index + 1} - missing name or URL: ${line}`);
+      return;
+    }
+    
+    // Split URLs by comma and normalize
+    const urls = urlsString.split(',')
+      .map(url => url.trim())
+      .filter(url => url.length > 0)
+      .map(url => {
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+          return 'https://' + url;
+        }
+        return url;
+      });
+    
+    if (urls.length === 0) {
+      console.warn(`Skipping line ${index + 1} - no valid URLs: ${line}`);
+      return;
+    }
+    
+    const linkData = { name, urls };
+    if (icon) {
+      linkData.icon = icon;
+    }
+    newLinks.push(linkData);
+  });
+  
+  if (newLinks.length === 0) {
+    showStatus('No valid links found. Please check your format.', 'error');
+    return;
+  }
+  
+  chrome.storage.sync.get(['links'], (result) => {
+    const links = result.links || [];
+    links.push(...newLinks);
+    chrome.storage.sync.set({ links }, () => {
+      loadLinks();
+      document.getElementById('batchLinkModal').classList.remove('active');
+      showStatus(`Successfully added ${newLinks.length} link(s)!`, 'success');
+    });
+  });
+}
+
+// Notes Management
+function loadNotes() {
+  chrome.storage.sync.get(['notes', 'adminUnlocked'], (result) => {
+    if (!result.adminUnlocked) {
+      return;
+    }
+    
+    const notes = result.notes || [];
+    const list = document.getElementById('notesList');
+    if (!list) return;
+    
+    list.innerHTML = '';
+    
+    if (notes.length === 0) {
+      list.innerHTML = '<p style="color: #64748b; text-align: center; padding: 2rem;">No notes yet. Click "Add Note" to create one.</p>';
+      return;
+    }
+    
+    notes.forEach((note, index) => {
+      const item = createNoteItem(note, index);
+      list.appendChild(item);
+    });
+  });
+}
+
+function createNoteItem(note, index) {
+  const div = document.createElement('div');
+  div.className = 'admin-note-item';
+  div.setAttribute('data-index', index);
+  
+  div.innerHTML = `
+    <div class="note-item-header">
+      <div class="note-item-info">
+        <div class="note-item-title">${escapeHtml(note.title)}</div>
+        <div class="note-item-content">${escapeHtml(note.content)}</div>
+        ${note.url ? `<div style="color: #64748b; font-size: 0.875rem; margin-top: 0.5rem; word-break: break-all;">🔗 ${escapeHtml(note.url)}</div>` : ''}
+      </div>
+      <div class="note-item-actions">
+        <button class="note-item-btn edit-btn" data-action="edit" data-index="${index}">Edit</button>
+        <button class="note-item-btn delete-btn-admin" data-action="delete" data-index="${index}">Delete</button>
+      </div>
+    </div>
+  `;
+  
+  // Edit button
+  div.querySelector('[data-action="edit"]').addEventListener('click', () => {
+    openNoteModal(note, index);
+  });
+  
+  // Delete button
+  div.querySelector('[data-action="delete"]').addEventListener('click', () => {
+    if (confirm(`Delete "${note.title}"?`)) {
+      deleteNote(index);
+    }
+  });
+  
+  return div;
+}
+
+function openNoteModal(note = null, index = null) {
+  // Create modal if it doesn't exist
+  let modal = document.getElementById('noteModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'noteModal';
+    modal.className = 'response-modal';
+    modal.innerHTML = `
+      <div class="response-modal-content">
+        <span class="response-modal-close" id="closeNoteModal">&times;</span>
+        <h3>${note ? 'Edit Note' : 'Add Note'}</h3>
+        <form id="noteForm">
+          <div class="input-group">
+            <label for="noteTitle">Title *</label>
+            <input type="text" id="noteTitle" required placeholder="Note title">
+          </div>
+          <div class="input-group">
+            <label for="noteContent">Content *</label>
+            <textarea id="noteContent" required placeholder="Note content" rows="6"></textarea>
+          </div>
+          <div class="input-group">
+            <label for="noteUrl">Link URL (Optional)</label>
+            <input type="url" id="noteUrl" placeholder="https://example.com">
+            <small>If provided, clicking the note on the dashboard will open this URL</small>
+          </div>
+          <div class="button-group-inline" style="margin-top: 1rem;">
+            <button type="submit" class="save-settings-btn" style="flex: 1;">${note ? 'Update' : 'Add'} Note</button>
+            <button type="button" class="reset-btn" id="cancelNoteBtn">Cancel</button>
+          </div>
+        </form>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    
+    // Close handlers
+    document.getElementById('closeNoteModal').addEventListener('click', () => {
+      modal.classList.remove('active');
+    });
+    
+    document.getElementById('cancelNoteBtn').addEventListener('click', () => {
+      modal.classList.remove('active');
+    });
+    
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.classList.remove('active');
+      }
+    });
+    
+    // Form submit
+    document.getElementById('noteForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      saveNote(index);
+    });
+  }
+  
+  // Populate form if editing
+  if (note) {
+    document.getElementById('noteTitle').value = note.title;
+    document.getElementById('noteContent').value = note.content;
+    document.getElementById('noteUrl').value = note.url || '';
+  } else {
+    document.getElementById('noteForm').reset();
+  }
+  
+  modal.classList.add('active');
+  document.getElementById('noteTitle').focus();
+}
+
+function saveNote(index) {
+  const title = document.getElementById('noteTitle').value.trim();
+  const content = document.getElementById('noteContent').value.trim();
+  let url = document.getElementById('noteUrl').value.trim();
+  
+  if (!title || !content) {
+    showStatus('Title and content are required!', 'error');
+    return;
+  }
+  
+  // Add https:// if URL doesn't start with http:// or https://
+  if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
+    url = 'https://' + url;
+  }
+  
+  chrome.storage.sync.get(['notes'], (result) => {
+    const notes = result.notes || [];
+    
+    const noteData = { title, content };
+    
+    if (url) {
+      noteData.url = url;
+    }
+    
+    if (index !== null) {
+      notes[index] = noteData;
+    } else {
+      notes.push(noteData);
+    }
+    
+    chrome.storage.sync.set({ notes }, () => {
+      loadNotes();
+      document.getElementById('noteModal').classList.remove('active');
+      showStatus(`Note ${index !== null ? 'updated' : 'added'} successfully!`, 'success');
+    });
+  });
+}
+
+function deleteNote(index) {
+  chrome.storage.sync.get(['notes'], (result) => {
+    const notes = result.notes || [];
+    notes.splice(index, 1);
+    chrome.storage.sync.set({ notes }, () => {
+      loadNotes();
+      showStatus('Note deleted successfully!', 'success');
+    });
+  });
+}
+
+// Handle company logo upload
+function handleCompanyLogoUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  // Check file type (PNG only)
+  if (file.type !== 'image/png') {
+    showStatus('Please select a PNG image file.', 'error');
+    event.target.value = '';
+    return;
+  }
+  
+  // Check file size (max 2MB for logo)
+  if (file.size > 2 * 1024 * 1024) {
+    showStatus('Logo file is too large. Maximum size is 2MB.', 'error');
+    event.target.value = '';
+    return;
+  }
+  
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const dataUrl = e.target.result;
+    // Set the data URL as the company logo value
+    document.getElementById('companyLogo').value = dataUrl;
+    updateCompanyLogoPreview();
+    showStatus('Logo uploaded successfully! Don\'t forget to save settings.', 'success');
+  };
+  
+  reader.onerror = () => {
+    showStatus('Error reading logo file.', 'error');
+    event.target.value = '';
+  };
+  
+  reader.readAsDataURL(file);
+}
+
+// Update company logo preview
+function updateCompanyLogoPreview() {
+  const logoUrl = document.getElementById('companyLogo').value.trim();
+  const preview = document.getElementById('companyLogoPreview');
+  const previewImg = document.getElementById('companyLogoPreviewImg');
+  
+  if (logoUrl) {
+    previewImg.src = logoUrl;
+    preview.style.display = 'block';
+    
+    // Handle image load errors
+    previewImg.onerror = () => {
+      preview.style.display = 'none';
+      if (logoUrl && !logoUrl.startsWith('data:')) {
+        showStatus('Could not load logo. Please check the file.', 'error');
+      }
+    };
+    
+    previewImg.onload = () => {
+      // Logo loaded successfully
+    };
+  } else {
+    preview.style.display = 'none';
+  }
+}
+
+// Handle background image upload
+function handleBackgroundImageUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  // Check file type
+  if (!file.type.startsWith('image/')) {
+    showStatus('Please select a valid image file.', 'error');
+    event.target.value = '';
+    return;
+  }
+  
+  // Check file size (max 5MB)
+  if (file.size > 5 * 1024 * 1024) {
+    showStatus('Image file is too large. Maximum size is 5MB.', 'error');
+    event.target.value = '';
+    return;
+  }
+  
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const dataUrl = e.target.result;
+    // Set the data URL as the background image value
+    document.getElementById('backgroundImage').value = dataUrl;
+    updateBackgroundImagePreview();
+    showStatus('Image uploaded successfully! Don\'t forget to save settings.', 'success');
+  };
+  
+  reader.onerror = () => {
+    showStatus('Error reading image file.', 'error');
+    event.target.value = '';
+  };
+  
+  reader.readAsDataURL(file);
+}
+
+// Update background image preview
+function updateBackgroundImagePreview() {
+  const imageUrl = document.getElementById('backgroundImage').value.trim();
+  const preview = document.getElementById('backgroundImagePreview');
+  const previewImg = document.getElementById('backgroundImagePreviewImg');
+  
+  if (imageUrl) {
+    previewImg.src = imageUrl;
+    preview.style.display = 'block';
+    
+    // Handle image load errors
+    previewImg.onerror = () => {
+      preview.style.display = 'none';
+      if (imageUrl && !imageUrl.startsWith('data:')) {
+        showStatus('Could not load image. Please check the URL.', 'error');
+      }
+    };
+    
+    previewImg.onload = () => {
+      // Image loaded successfully
+    };
+  } else {
+    preview.style.display = 'none';
+  }
+}
 

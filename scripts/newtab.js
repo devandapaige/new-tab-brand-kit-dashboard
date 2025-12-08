@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initializeDateTime();
   initializeGreeting();
   checkAdminStatus();
+  loadCardVisibility();
   loadTrackers();
   loadLinks();
   loadNotes();
@@ -22,27 +23,114 @@ document.addEventListener('DOMContentLoaded', () => {
       loadLinks();
       loadNotes();
     }
+    // Listen for card visibility changes
+    if (areaName === 'sync' && (
+      changes.cardVisibilityTrackers ||
+      changes.cardVisibilityNotes ||
+      changes.cardVisibilityLinks ||
+      changes.cardVisibilityTodoist
+    )) {
+      loadCardVisibility();
+    }
+    // Listen for background image changes (from local storage)
+    if (areaName === 'local' && changes.backgroundImage) {
+      const backgroundImageEl = document.getElementById('backgroundImage');
+      
+      if (backgroundImageEl) {
+        const newValue = changes.backgroundImage.newValue;
+        if (newValue && newValue.trim()) {
+          const imageUrl = newValue.trim();
+          // Apply the background image
+          backgroundImageEl.style.backgroundImage = `url("${imageUrl}")`;
+          backgroundImageEl.style.opacity = '1';
+        } else {
+          backgroundImageEl.style.backgroundImage = 'none';
+          backgroundImageEl.style.opacity = '0';
+        }
+      }
+    }
+    // Listen for overlay and background color changes
+    if (areaName === 'sync' && (
+      changes.overlayEnabled ||
+      changes.overlayOpacity ||
+      changes.backgroundColor ||
+      changes.textLight ||
+      changes.borderColor ||
+      changes.shadowIntensity ||
+      changes.borderRadius ||
+      changes.customHeaderTitle ||
+      changes.customHeaderText ||
+      changes.businessInfoLine1 ||
+      changes.businessInfoLine2 ||
+      changes.businessInfoLine3 ||
+      changes.businessInfoLine4 ||
+      changes.userName
+    )) {
+      loadBrandSettings();
+    }
+    
+    // Listen for company logo changes (from local storage)
+    if (areaName === 'local' && changes.companyLogo) {
+      const companyLogoEl = document.getElementById('companyLogo');
+      if (companyLogoEl) {
+        if (changes.companyLogo.newValue) {
+          companyLogoEl.src = changes.companyLogo.newValue;
+          companyLogoEl.style.display = 'block';
+        } else {
+          companyLogoEl.style.display = 'none';
+        }
+      }
+    }
   });
 });
+
+// Load and apply card visibility settings
+function loadCardVisibility() {
+  chrome.storage.sync.get([
+    'cardVisibilityTrackers',
+    'cardVisibilityNotes',
+    'cardVisibilityLinks',
+    'cardVisibilityTodoist'
+  ], (result) => {
+    // Trackers card
+    const trackersCard = document.getElementById('trackersCard');
+    if (trackersCard) {
+      const isVisible = result.cardVisibilityTrackers !== false; // Default to true if not set
+      trackersCard.style.display = isVisible ? 'block' : 'none';
+    }
+    
+    // Notes card
+    const notesCard = document.querySelector('.notes-card');
+    if (notesCard) {
+      const isVisible = result.cardVisibilityNotes !== false; // Default to true if not set
+      notesCard.style.display = isVisible ? 'block' : 'none';
+    }
+    
+    // Links card
+    const linksCard = document.querySelector('.links-card');
+    if (linksCard) {
+      const isVisible = result.cardVisibilityLinks !== false; // Default to true if not set
+      linksCard.style.display = isVisible ? 'block' : 'none';
+    }
+    
+    // Todoist card
+    const todoistCard = document.querySelector('.todoist-card');
+    if (todoistCard) {
+      const isVisible = result.cardVisibilityTodoist !== false; // Default to true if not set
+      todoistCard.style.display = isVisible ? 'block' : 'none';
+    }
+  });
+}
 
 // Check admin status and update UI accordingly
 function checkAdminStatus() {
   chrome.storage.sync.get(['adminPassword', 'adminUnlocked'], (result) => {
     const hasPassword = !!result.adminPassword;
+    // Only show buttons if admin is explicitly unlocked (or no password is set)
+    // If password exists but not unlocked, hide buttons
     const isUnlocked = hasPassword ? (result.adminUnlocked === true) : true;
     
-    // Show/hide add buttons
-    const addButtons = ['addLinkBtn', 'addNoteBtn', 'addTrackerBtn'];
-    addButtons.forEach(btnId => {
-      const btn = document.getElementById(btnId);
-      if (btn) {
-        if (isUnlocked) {
-          btn.style.display = 'inline-block';
-        } else {
-          btn.style.display = 'none';
-        }
-      }
-    });
+    // No add buttons on dashboard - all CRUD is in Settings
     
     // Store admin status for use in other functions
     window.isAdmin = isUnlocked;
@@ -60,9 +148,25 @@ async function loadBrandSettings() {
       'cardBackground',
       'textPrimary',
       'textSecondary',
-      'backgroundImage',
-      'userName'
+      'textLight',
+      'borderColor',
+      'shadowIntensity',
+      'borderRadius',
+      'userName',
+      'overlayEnabled',
+      'overlayOpacity',
+      'customHeaderTitle',
+      'customHeaderText',
+      'businessInfoLine1',
+      'businessInfoLine2',
+      'businessInfoLine3',
+      'businessInfoLine4'
     ]);
+    
+    // Load background image and company logo from local storage (they're stored there because they can be large)
+    const localResult = await chrome.storage.local.get(['backgroundImage', 'companyLogo']);
+    const backgroundImage = localResult.backgroundImage || result.backgroundImage; // Fallback to sync for backwards compatibility
+    const companyLogo = localResult.companyLogo;
 
     const root = document.documentElement;
     
@@ -106,12 +210,106 @@ async function loadBrandSettings() {
       root.style.setProperty('--text-secondary', result.textSecondary);
     }
     
-    if (result.backgroundImage) {
-      document.getElementById('backgroundImage').style.backgroundImage = `url(${result.backgroundImage})`;
+    if (result.textLight) {
+      root.style.setProperty('--text-light', result.textLight);
+    }
+    
+    if (result.borderColor) {
+      root.style.setProperty('--border-color', result.borderColor);
+    }
+    
+    // Update shadow values based on intensity
+    const shadowIntensity = result.shadowIntensity !== undefined ? result.shadowIntensity : 15;
+    const shadowOpacity = shadowIntensity / 100;
+    root.style.setProperty('--shadow', `0 4px 6px rgba(0, 0, 0, ${0.1 * shadowOpacity})`);
+    root.style.setProperty('--shadow-lg', `0 10px 25px rgba(0, 0, 0, ${0.15 * shadowOpacity})`);
+    
+    // Update border radius values
+    const borderRadius = result.borderRadius !== undefined ? result.borderRadius : 8;
+    root.style.setProperty('--border-radius', `${borderRadius}px`);
+    root.style.setProperty('--border-radius-sm', `${Math.round(borderRadius * 0.75)}px`);
+    root.style.setProperty('--border-radius-lg', `${Math.round(borderRadius * 1.5)}px`);
+    
+    const backgroundImageEl = document.getElementById('backgroundImage');
+    
+    if (backgroundImageEl) {
+      if (backgroundImage && backgroundImage.trim()) {
+        // Handle both data URLs and regular URLs
+        const imageUrl = backgroundImage.trim();
+        backgroundImageEl.style.backgroundImage = `url("${imageUrl}")`;
+        backgroundImageEl.style.opacity = '1';
+      } else {
+        // Clear background if no image is set
+        backgroundImageEl.style.backgroundImage = 'none';
+        backgroundImageEl.style.opacity = '0';
+      }
     }
     
     if (result.userName) {
       document.getElementById('userName').textContent = result.userName;
+    }
+    
+    // Load and display company logo
+    const companyLogoEl = document.getElementById('companyLogo');
+    if (companyLogoEl && companyLogo) {
+      companyLogoEl.src = companyLogo;
+      companyLogoEl.style.display = 'block';
+    } else if (companyLogoEl) {
+      companyLogoEl.style.display = 'none';
+    }
+    
+    // Load and display business info (with placeholder support)
+    const businessInfoEl = document.getElementById('businessInfo');
+    const businessInfoLines = [
+      result.businessInfoLine1,
+      result.businessInfoLine2,
+      result.businessInfoLine3,
+      result.businessInfoLine4
+    ].filter(line => line && line.trim());
+    
+    if (businessInfoEl && businessInfoLines.length > 0) {
+      document.getElementById('businessInfoLine1').innerHTML = replacePlaceholders(result.businessInfoLine1 || '', result.userName);
+      document.getElementById('businessInfoLine2').innerHTML = replacePlaceholders(result.businessInfoLine2 || '', result.userName);
+      document.getElementById('businessInfoLine3').innerHTML = replacePlaceholders(result.businessInfoLine3 || '', result.userName);
+      document.getElementById('businessInfoLine4').innerHTML = replacePlaceholders(result.businessInfoLine4 || '', result.userName);
+      businessInfoEl.style.display = 'block';
+    } else if (businessInfoEl) {
+      businessInfoEl.style.display = 'none';
+    }
+    
+    // Load and display custom header
+    const greetingEl = document.getElementById('greeting');
+    const dateTimeEl = document.getElementById('dateTime');
+    
+    if (result.customHeaderTitle || result.customHeaderText) {
+      // Use custom header
+      if (result.customHeaderTitle) {
+        greetingEl.innerHTML = replacePlaceholders(result.customHeaderTitle, result.userName);
+      }
+      if (result.customHeaderText) {
+        dateTimeEl.innerHTML = replacePlaceholders(result.customHeaderText, result.userName);
+      }
+    } else {
+      // Use default header
+      if (greetingEl) {
+        const greetingText = getGreeting();
+        greetingEl.innerHTML = `<span id="greetingText">${greetingText}</span>, <span id="userName">${result.userName || 'Team'}</span>.`;
+      }
+      // Date/time will be updated by initializeDateTime
+    }
+    
+    // Apply overlay settings
+    const overlayEl = document.querySelector('.overlay');
+    if (overlayEl) {
+      const overlayEnabled = result.overlayEnabled !== false; // Default to true
+      
+      if (overlayEnabled && result.backgroundColor) {
+        overlayEl.style.display = 'block';
+        // Use the backgroundColor value directly (it already has the correct opacity from options.js)
+        overlayEl.style.backgroundColor = result.backgroundColor;
+      } else {
+        overlayEl.style.display = 'none';
+      }
     }
   } catch (error) {
     console.error('Error loading brand settings:', error);
@@ -133,34 +331,100 @@ function initializeDateTime() {
   const dateTimeEl = document.getElementById('dateTime');
   
   function updateDateTime() {
-    const now = new Date();
-    const options = { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    };
-    dateTimeEl.textContent = now.toLocaleDateString('en-US', options);
+    chrome.storage.sync.get(['customHeaderText', 'userName'], (result) => {
+      if (result.customHeaderText) {
+        // Use custom header text with placeholders
+        dateTimeEl.innerHTML = replacePlaceholders(result.customHeaderText, result.userName);
+      } else {
+        // Use default date/time
+        const now = new Date();
+        const options = { 
+          weekday: 'long', 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        };
+        dateTimeEl.textContent = now.toLocaleDateString('en-US', options);
+      }
+    });
   }
   
   updateDateTime();
   setInterval(updateDateTime, 60000); // Update every minute
+  
+  // Also update custom header greeting if it contains {{greeting}} (case-insensitive)
+  setInterval(() => {
+    chrome.storage.sync.get(['customHeaderTitle', 'userName', 'businessInfoLine1', 'businessInfoLine2', 'businessInfoLine3', 'businessInfoLine4'], (result) => {
+      // Update header if it contains greeting placeholder
+      if (result.customHeaderTitle && /\{\{greeting\}\}/i.test(result.customHeaderTitle)) {
+        const greetingEl = document.getElementById('greeting');
+        if (greetingEl) {
+          greetingEl.innerHTML = replacePlaceholders(result.customHeaderTitle, result.userName);
+        }
+      }
+      
+      // Update business info if any line contains placeholders
+      const businessInfoEl = document.getElementById('businessInfo');
+      if (businessInfoEl && businessInfoEl.style.display !== 'none') {
+        document.getElementById('businessInfoLine1').innerHTML = replacePlaceholders(result.businessInfoLine1 || '', result.userName);
+        document.getElementById('businessInfoLine2').innerHTML = replacePlaceholders(result.businessInfoLine2 || '', result.userName);
+        document.getElementById('businessInfoLine3').innerHTML = replacePlaceholders(result.businessInfoLine3 || '', result.userName);
+        document.getElementById('businessInfoLine4').innerHTML = replacePlaceholders(result.businessInfoLine4 || '', result.userName);
+      }
+    });
+  }, 60000); // Check every minute for greeting changes
 }
 
-// Initialize greeting
-function initializeGreeting() {
-  const greetingEl = document.getElementById('greetingText');
+// Get greeting text based on time
+function getGreeting() {
   const hour = new Date().getHours();
   
   if (hour < 12) {
-    greetingEl.textContent = 'Good morning';
+    return 'Good morning';
   } else if (hour < 18) {
-    greetingEl.textContent = 'Good afternoon';
+    return 'Good afternoon';
   } else {
-    greetingEl.textContent = 'Good evening';
+    return 'Good evening';
   }
+}
+
+// Initialize greeting (for default header)
+function initializeGreeting() {
+  chrome.storage.sync.get(['customHeaderTitle', 'userName'], (result) => {
+    // Only update if not using custom header
+    if (!result.customHeaderTitle) {
+      const greetingEl = document.getElementById('greetingText');
+      if (greetingEl) {
+        greetingEl.textContent = getGreeting();
+      }
+    }
+  });
+}
+
+// Replace placeholders in custom header text (case-insensitive)
+function replacePlaceholders(text, userName) {
+  if (!text) return '';
+  
+  const greeting = getGreeting();
+  const now = new Date();
+  const dateOptions = { 
+    weekday: 'long', 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  };
+  const dateStr = now.toLocaleDateString('en-US', dateOptions);
+  
+  // Case-insensitive replacement using regex with 'i' flag
+  return text
+    .replace(/\{\{greeting\}\}/gi, greeting)
+    .replace(/\{\{date\}\}/gi, dateStr)
+    .replace(/\{\{userName\}\}/gi, userName || 'Team')
+    .replace(/\{\{username\}\}/gi, userName || 'Team'); // Also support lowercase
 }
 
 // Trackers
@@ -200,6 +464,14 @@ function createTrackerElement(tracker, index) {
   div.className = 'tracker-item';
   div.dataset.trackerId = tracker.id;
   
+  // Make clickable if URL is provided
+  if (tracker.url) {
+    div.style.cursor = 'pointer';
+    div.addEventListener('click', () => {
+      window.open(tracker.url, '_blank', 'noopener,noreferrer');
+    });
+  }
+  
   const icon = tracker.icon || '⏰';
   const name = tracker.name || 'Tracker';
   const targetDate = new Date(tracker.date);
@@ -209,6 +481,7 @@ function createTrackerElement(tracker, index) {
     <div class="tracker-header">
       <span class="tracker-icon">${icon}</span>
       <span class="tracker-name">${name}</span>
+      ${tracker.url ? '<span style="font-size: 0.75rem; opacity: 0.7; margin-left: 0.5rem;">🔗</span>' : ''}
     </div>
     <div class="tracker-display" data-target="${targetDate.getTime()}" data-type="${tracker.type}">
       <div class="tracker-time">
@@ -510,40 +783,56 @@ function loadLinks() {
 }
 
 function createLinkElement(link, index) {
+  // Handle both old format (single URL) and new format (array of URLs)
+  const urls = link.urls || (link.url ? [link.url] : []);
+  
+  if (urls.length === 0) {
+    // No URLs, return a disabled element
+    const div = document.createElement('div');
+    div.className = 'link-item';
+    div.style.opacity = '0.5';
+    div.style.cursor = 'not-allowed';
+    
+    const icon = link.icon || (link.name ? link.name.charAt(0).toUpperCase() : '🔗');
+    div.innerHTML = `
+      <div class="link-icon">${icon}</div>
+      <div class="link-name">${escapeHtml(link.name)}</div>
+    `;
+    return div;
+  }
+  
   const a = document.createElement('a');
   a.className = 'link-item';
-  a.href = link.url;
-  a.target = '_blank';
-  a.rel = 'noopener noreferrer';
+  
+  // If multiple URLs, handle click to open all
+  if (urls.length > 1) {
+    a.href = '#';
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      // Open all URLs in new tabs
+      urls.forEach((url, urlIndex) => {
+        chrome.tabs.create({ 
+          url: url, 
+          active: urlIndex === urls.length - 1 // Activate the last tab
+        });
+      });
+    });
+  } else {
+    // Single URL - normal link behavior
+    a.href = urls[0];
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+  }
   
   // Use emoji icon if provided, otherwise use first letter of link name
   const icon = link.icon || (link.name ? link.name.charAt(0).toUpperCase() : '🔗');
   
   a.innerHTML = `
     <div class="link-icon">${icon}</div>
-    <div class="link-name">${escapeHtml(link.name)}</div>
+    <div class="link-name">${escapeHtml(link.name)}${urls.length > 1 ? ' <small style="opacity: 0.7; font-size: 0.7em;">(' + urls.length + ' tabs)</small>' : ''}</div>
   `;
   
-  if (window.isAdmin) {
-    a.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      if (confirm('Delete this link?')) {
-        deleteLink(index);
-      }
-    });
-  }
-  
   return a;
-}
-
-function deleteLink(index) {
-  chrome.storage.sync.get(['links'], (result) => {
-    const links = result.links || [];
-    links.splice(index, 1);
-    chrome.storage.sync.set({ links }, () => {
-      loadLinks();
-    });
-  });
 }
 
 // Notes
@@ -572,193 +861,31 @@ function createNoteElement(note, index) {
   const div = document.createElement('div');
   div.className = 'note-item';
   
-  div.innerHTML = `
-    <div class="note-title">${escapeHtml(note.title)}</div>
-    <div class="note-content">${escapeHtml(note.content)}</div>
-  `;
-  
-  if (window.isAdmin) {
-    div.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      if (confirm('Delete this note?')) {
-        deleteNote(index);
-      }
+  // Make clickable if URL is provided
+  if (note.url) {
+    div.style.cursor = 'pointer';
+    div.addEventListener('click', () => {
+      window.open(note.url, '_blank', 'noopener,noreferrer');
     });
   }
   
+  div.innerHTML = `
+    <div class="note-title">
+      ${escapeHtml(note.title)}
+      ${note.url ? '<span style="font-size: 0.75rem; opacity: 0.7; margin-left: 0.5rem;">🔗</span>' : ''}
+    </div>
+    <div class="note-content">${escapeHtml(note.content)}</div>
+  `;
+  
   return div;
-}
-
-function deleteNote(index) {
-  chrome.storage.sync.get(['notes'], (result) => {
-    const notes = result.notes || [];
-    notes.splice(index, 1);
-    chrome.storage.sync.set({ notes }, () => {
-      loadNotes();
-    });
-  });
 }
 
 
 
 // Modals
 function initializeModals() {
-  // Link Modal
-  const linkModal = document.getElementById('linkModal');
-  const addLinkBtn = document.getElementById('addLinkBtn');
-  const closeLinkModal = document.getElementById('closeLinkModal');
-  const linkForm = document.getElementById('linkForm');
-  
-  addLinkBtn.addEventListener('click', () => {
-    if (!window.isAdmin) {
-      alert('Only administrators can add links. Please unlock settings to add links.');
-      return;
-    }
-    linkModal.classList.add('active');
-  });
-  
-  closeLinkModal.addEventListener('click', () => {
-    linkModal.classList.remove('active');
-  });
-  
-  linkForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    
-    if (!window.isAdmin) {
-      alert('Only administrators can add links.');
-      return;
-    }
-    
-    const name = document.getElementById('linkName').value;
-    let url = document.getElementById('linkUrl').value;
-    const icon = document.getElementById('linkIcon').value.trim();
-    
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      url = 'https://' + url;
-    }
-    
-    chrome.storage.sync.get(['links'], (result) => {
-      const links = result.links || [];
-      // Store icon only if provided, otherwise it will default to first letter of name
-      const linkData = { name, url };
-      if (icon) {
-        linkData.icon = icon;
-      }
-      links.push(linkData);
-      chrome.storage.sync.set({ links }, () => {
-        loadLinks();
-        linkModal.classList.remove('active');
-        linkForm.reset();
-      });
-    });
-  });
-  
-  // Note Modal
-  const noteModal = document.getElementById('noteModal');
-  const addNoteBtn = document.getElementById('addNoteBtn');
-  const closeNoteModal = document.getElementById('closeNoteModal');
-  const noteForm = document.getElementById('noteForm');
-  
-  addNoteBtn.addEventListener('click', () => {
-    if (!window.isAdmin) {
-      alert('Only administrators can add notes. Please unlock settings to add notes.');
-      return;
-    }
-    noteModal.classList.add('active');
-  });
-  
-  closeNoteModal.addEventListener('click', () => {
-    noteModal.classList.remove('active');
-  });
-  
-  noteForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    
-    if (!window.isAdmin) {
-      alert('Only administrators can add notes.');
-      return;
-    }
-    
-    const title = document.getElementById('noteTitle').value;
-    const content = document.getElementById('noteContent').value;
-    
-    chrome.storage.sync.get(['notes'], (result) => {
-      const notes = result.notes || [];
-      notes.push({ title, content });
-      chrome.storage.sync.set({ notes }, () => {
-        loadNotes();
-        noteModal.classList.remove('active');
-        noteForm.reset();
-      });
-    });
-  });
-  
-  // Tracker Modal
-  const trackerModal = document.getElementById('trackerModal');
-  const addTrackerBtn = document.getElementById('addTrackerBtn');
-  const closeTrackerModal = document.getElementById('closeTrackerModal');
-  const trackerForm = document.getElementById('trackerForm');
-  
-  if (addTrackerBtn) {
-    addTrackerBtn.addEventListener('click', () => {
-      if (!window.isAdmin) {
-        alert('Only administrators can add trackers. Please unlock settings to add trackers.');
-        return;
-      }
-      openTrackerModal();
-    });
-  }
-  
-  if (closeTrackerModal) {
-    closeTrackerModal.addEventListener('click', () => {
-      trackerModal.classList.remove('active');
-    });
-  }
-  
-  if (trackerForm) {
-    trackerForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      if (!window.isAdmin) {
-        alert('Only administrators can add trackers.');
-        return;
-      }
-      saveTracker();
-    });
-  }
-  
-  // Populate date dropdowns for tracker modal
-  populateTrackerDateDropdowns();
-  
-  // Update day dropdown when month/year changes
-  const trackerMonth = document.getElementById('trackerMonth');
-  const trackerYear = document.getElementById('trackerYear');
-  if (trackerMonth) {
-    trackerMonth.addEventListener('change', updateTrackerDayDropdown);
-  }
-  if (trackerYear) {
-    trackerYear.addEventListener('change', updateTrackerDayDropdown);
-  }
-  
-  // Icon picker for tracker modal
-  const trackerIconPickerBtn = document.getElementById('trackerIconPickerBtn');
-  const trackerIconGrid = document.getElementById('trackerIconGrid');
-  if (trackerIconPickerBtn && trackerIconGrid) {
-    trackerIconPickerBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      trackerIconGrid.style.display = trackerIconGrid.style.display === 'none' ? 'grid' : 'none';
-    });
-    
-    trackerIconGrid.querySelectorAll('.icon-option').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        const icon = btn.dataset.icon;
-        document.getElementById('trackerSelectedIcon').textContent = icon;
-        trackerIconGrid.style.display = 'none';
-      });
-    });
-  }
-  
-  // Close modals when clicking outside
+  // All modals removed - CRUD is now in Settings page
+  // Close modals when clicking outside (if any remain)
   window.addEventListener('click', (e) => {
     if (e.target.classList.contains('modal')) {
       e.target.classList.remove('active');
@@ -774,121 +901,6 @@ function initializeSettings() {
 }
 
 // Keyboard shortcuts
-// Tracker Modal Functions
-function openTrackerModal() {
-  const trackerModal = document.getElementById('trackerModal');
-  if (!trackerModal) return;
-  
-  // Reset form
-  const form = document.getElementById('trackerForm');
-  if (form) form.reset();
-  
-  // Set default values
-  document.getElementById('trackerType').value = 'countdown';
-  document.getElementById('trackerSelectedIcon').textContent = '⏰';
-  document.getElementById('trackerPinned').checked = true;
-  
-  // Set default date to today
-  const today = new Date();
-  document.getElementById('trackerMonth').value = today.getMonth();
-  document.getElementById('trackerYear').value = today.getFullYear();
-  updateTrackerDayDropdown();
-  document.getElementById('trackerDay').value = today.getDate();
-  
-  trackerModal.classList.add('active');
-  document.getElementById('trackerName').focus();
-}
-
-function populateTrackerDateDropdowns() {
-  const daySelect = document.getElementById('trackerDay');
-  const yearSelect = document.getElementById('trackerYear');
-  
-  if (!daySelect || !yearSelect) return;
-  
-  // Populate days (will be updated based on month/year)
-  for (let i = 1; i <= 31; i++) {
-    const option = document.createElement('option');
-    option.value = i;
-    option.textContent = i;
-    daySelect.appendChild(option);
-  }
-  
-  // Populate years (current year ± 50)
-  const currentYear = new Date().getFullYear();
-  for (let i = currentYear - 50; i <= currentYear + 50; i++) {
-    const option = document.createElement('option');
-    option.value = i;
-    option.textContent = i;
-    yearSelect.appendChild(option);
-  }
-}
-
-function updateTrackerDayDropdown() {
-  const month = parseInt(document.getElementById('trackerMonth').value);
-  const year = parseInt(document.getElementById('trackerYear').value);
-  const daySelect = document.getElementById('trackerDay');
-  
-  if (isNaN(month) || isNaN(year) || !daySelect) {
-    return;
-  }
-  
-  // Get days in month
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const currentValue = parseInt(daySelect.value) || 1;
-  
-  // Clear and repopulate
-  daySelect.innerHTML = '<option value="">Day</option>';
-  for (let i = 1; i <= daysInMonth; i++) {
-    const option = document.createElement('option');
-    option.value = i;
-    option.textContent = i;
-    if (i === currentValue && i <= daysInMonth) {
-      option.selected = true;
-    }
-    daySelect.appendChild(option);
-  }
-}
-
-function saveTracker() {
-  const name = document.getElementById('trackerName').value.trim();
-  const type = document.getElementById('trackerType').value;
-  const month = parseInt(document.getElementById('trackerMonth').value);
-  const day = parseInt(document.getElementById('trackerDay').value);
-  const year = parseInt(document.getElementById('trackerYear').value);
-  const time = document.getElementById('trackerTime').value;
-  const icon = document.getElementById('trackerSelectedIcon').textContent;
-  const pinned = document.getElementById('trackerPinned').checked;
-  
-  if (!name || isNaN(month) || isNaN(day) || isNaN(year)) {
-    alert('Please fill in all required fields');
-    return;
-  }
-  
-  // Create date from inputs
-  const [hours, minutes] = time.split(':').map(Number);
-  const targetDate = new Date(year, month, day, hours || 0, minutes || 0);
-  
-  chrome.storage.sync.get(['countdowns'], (result) => {
-    const countdowns = result.countdowns || [];
-    
-    const trackerData = {
-      id: Date.now().toString(),
-      name,
-      type,
-      date: targetDate.toISOString(),
-      icon,
-      pinnedToDashboard: pinned
-    };
-    
-    countdowns.push(trackerData);
-    
-    chrome.storage.sync.set({ countdowns }, () => {
-      loadTrackers();
-      document.getElementById('trackerModal').classList.remove('active');
-      document.getElementById('trackerForm').reset();
-    });
-  });
-}
 
 function initializeKeyboardShortcuts() {
   document.addEventListener('keydown', (e) => {
@@ -906,22 +918,7 @@ function initializeKeyboardShortcuts() {
       }
     }
     
-    // Quick add shortcuts (when not in input fields and user is admin)
-    if (!e.target.matches('input, textarea') && window.isAdmin) {
-      // 'l' key: Add link
-      if (e.key === 'l' && !e.ctrlKey && !e.metaKey) {
-        document.getElementById('addLinkBtn').click();
-      }
-      // 'n' key: Add note
-      if (e.key === 'n' && !e.ctrlKey && !e.metaKey) {
-        document.getElementById('addNoteBtn').click();
-      }
-      // 't' key: Add tracker
-      if (e.key === 't' && !e.ctrlKey && !e.metaKey) {
-        const addTrackerBtn = document.getElementById('addTrackerBtn');
-        if (addTrackerBtn) addTrackerBtn.click();
-      }
-    }
+    // No quick add shortcuts - all CRUD is in Settings page
   });
 }
 
@@ -931,4 +928,6 @@ function escapeHtml(text) {
   div.textContent = text;
   return div.innerHTML;
 }
+
+
 
