@@ -2,10 +2,14 @@
 
 // Install/Update handler
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('Brand Kit Dashboard installed');
   
   // Set default settings if not already set
   chrome.storage.sync.get(['primaryColor'], (result) => {
+    // Handle Firefox case where result might be undefined
+    if (!result) {
+      result = {};
+    }
+    
     if (!result.primaryColor) {
       chrome.storage.sync.set({
         primaryColor: '#4A90E2',
@@ -18,6 +22,12 @@ chrome.runtime.onInstalled.addListener(() => {
         userName: 'Team',
         links: [],
         notes: []
+      }, () => {
+        // Check for errors in Firefox
+        if (chrome.runtime.lastError) {
+          console.error('Error setting default settings:', chrome.runtime.lastError);
+        } else {
+        }
       });
     }
   });

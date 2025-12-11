@@ -1,17 +1,14 @@
 {
-  "manifest_version": 2,
+  "manifest_version": 3,
   "name": "Brand Kit Dashboard",
   "version": "1.0.0",
   "description": "Customizable new tab dashboard for small businesses with reminders, links, and brand colors",
-  "applications": {
-    "gecko": {
-      "id": "brand-kit-dashboard@example.com"
-    }
-  },
   "permissions": [
     "storage",
     "alarms",
-    "notifications",
+    "notifications"
+  ],
+  "host_permissions": [
     "https://api.todoist.com/*"
   ],
   "chrome_url_overrides": {
@@ -22,11 +19,8 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "options_ui": {
-    "page": "options.html",
-    "open_in_tab": true
-  },
-  "browser_action": {
+  "options_page": "options.html",
+  "action": {
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
@@ -35,8 +29,7 @@
     }
   },
   "background": {
-    "scripts": ["background.js"],
-    "persistent": false
+    "service_worker": "background.js"
   }
 }
 

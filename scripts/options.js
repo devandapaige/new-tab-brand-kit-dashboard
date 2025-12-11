@@ -7,11 +7,19 @@ document.addEventListener('DOMContentLoaded', () => {
   initializeFormHandlers();
   initializeAdminSection();
   initializeCountdowns();
+  initializeNavigation();
+  initializeCardOrder();
+  initializeTextCards();
+  initializeCollapsibleSections();
 });
 
 // Load brand colors and apply to settings page
 function loadBrandColors() {
   chrome.storage.sync.get(['primaryColor', 'secondaryColor', 'accentColor', 'borderRadius'], (result) => {
+    // Handle Firefox case where result might be undefined
+    if (!result) {
+      result = {};
+    }
     const root = document.documentElement;
     
     if (result.primaryColor) {
@@ -59,24 +67,35 @@ function loadSettings() {
     'overlayOpacity',
     'customHeaderTitle',
     'customHeaderText',
-    'businessInfoLine1',
-    'businessInfoLine2',
-    'businessInfoLine3',
-    'businessInfoLine4'
-  ], (result) => {
+      'businessInfoLine1',
+      'businessInfoLine2',
+      'businessInfoLine3',
+      'businessInfoLine4',
+      'companyLogoUrl'
+    ], (result) => {
+    // Handle Firefox case where result might be undefined
+    if (!result) {
+      result = {};
+    }
     if (result.primaryColor) {
       document.getElementById('primaryColor').value = result.primaryColor;
       document.getElementById('primaryColorText').value = result.primaryColor;
+      const preview = document.getElementById('primaryColorPreview');
+      if (preview) preview.style.backgroundColor = result.primaryColor;
     }
     
     if (result.secondaryColor) {
       document.getElementById('secondaryColor').value = result.secondaryColor;
       document.getElementById('secondaryColorText').value = result.secondaryColor;
+      const preview = document.getElementById('secondaryColorPreview');
+      if (preview) preview.style.backgroundColor = result.secondaryColor;
     }
     
     if (result.accentColor) {
       document.getElementById('accentColor').value = result.accentColor;
       document.getElementById('accentColorText').value = result.accentColor;
+      const preview = document.getElementById('accentColorPreview');
+      if (preview) preview.style.backgroundColor = result.accentColor;
     }
     
     if (result.backgroundColor) {
@@ -91,6 +110,10 @@ function loadSettings() {
       document.getElementById('cardBackground').value = hex;
       document.getElementById('cardBackgroundText').value = result.cardBackground;
       
+      // Update preview
+      const preview = document.getElementById('cardBackgroundPreview');
+      if (preview) preview.style.backgroundColor = result.cardBackground;
+      
       // Extract opacity from rgba value
       const opacityMatch = result.cardBackground.match(/rgba?\([^)]+,\s*([\d.]+)\)/);
       if (opacityMatch) {
@@ -102,6 +125,8 @@ function loadSettings() {
       // Default to 95% if not set
       document.getElementById('cardBackgroundOpacity').value = 95;
       document.getElementById('cardBackgroundOpacityValue').textContent = '95';
+      const preview = document.getElementById('cardBackgroundPreview');
+      if (preview) preview.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
     }
     
     if (result.textPrimary) {
@@ -157,7 +182,8 @@ function loadSettings() {
     
     // Load background image from local storage (it's stored there because it can be large)
     chrome.storage.local.get(['backgroundImage'], (localResult) => {
-      if (localResult.backgroundImage) {
+      // Handle Firefox case where localResult might be undefined
+      if (localResult && localResult.backgroundImage) {
         document.getElementById('backgroundImage').value = localResult.backgroundImage;
         updateBackgroundImagePreview();
       } else {
@@ -202,36 +228,20 @@ function loadSettings() {
     
     // Load company logo from local storage
     chrome.storage.local.get(['companyLogo'], (localResult) => {
-      if (localResult.companyLogo) {
+      // Handle Firefox case where localResult might be undefined
+      if (localResult && localResult.companyLogo) {
         document.getElementById('companyLogo').value = localResult.companyLogo;
         updateCompanyLogoPreview();
       }
     });
     
-    // Load card visibility settings
-    if (result.cardVisibilityTrackers !== undefined) {
-      document.getElementById('cardVisibilityTrackers').checked = result.cardVisibilityTrackers;
-    } else {
-      document.getElementById('cardVisibilityTrackers').checked = true; // Default to visible
+    // Load company logo URL
+    if (result.companyLogoUrl) {
+      document.getElementById('companyLogoUrl').value = result.companyLogoUrl;
     }
     
-    if (result.cardVisibilityNotes !== undefined) {
-      document.getElementById('cardVisibilityNotes').checked = result.cardVisibilityNotes;
-    } else {
-      document.getElementById('cardVisibilityNotes').checked = true; // Default to visible
-    }
-    
-    if (result.cardVisibilityLinks !== undefined) {
-      document.getElementById('cardVisibilityLinks').checked = result.cardVisibilityLinks;
-    } else {
-      document.getElementById('cardVisibilityLinks').checked = true; // Default to visible
-    }
-    
-    if (result.cardVisibilityTodoist !== undefined) {
-      document.getElementById('cardVisibilityTodoist').checked = result.cardVisibilityTodoist;
-    } else {
-      document.getElementById('cardVisibilityTodoist').checked = true; // Default to visible
-    }
+    // Card visibility is now handled by loadCardOrder() which is called separately
+    // No need to load old checkbox elements here
     
     // Load overlay settings
     if (result.overlayEnabled !== undefined) {
@@ -300,8 +310,20 @@ function initializeColorPickers() {
 function syncColorPicker(pickerId, textId, isRgba = false) {
   const picker = document.getElementById(pickerId);
   const text = document.getElementById(textId);
+  const previewId = pickerId + 'Preview';
+  const preview = document.getElementById(previewId);
   
   if (!picker || !text) return;
+  
+  const updatePreview = (colorValue) => {
+    if (preview) {
+      if (isRgba) {
+        preview.style.backgroundColor = colorValue;
+      } else {
+        preview.style.backgroundColor = colorValue;
+      }
+    }
+  };
   
   picker.addEventListener('input', (e) => {
     const value = e.target.value;
@@ -310,19 +332,34 @@ function syncColorPicker(pickerId, textId, isRgba = false) {
       const rgba = hexToRgba(value, 0.85);
       if (rgba) {
         text.value = rgba;
+        updatePreview(rgba);
       }
     } else {
       // Color picker always returns valid hex, so we can safely set it
       if (/^#([A-Fa-f0-9]{6})$/.test(value)) {
         text.value = value;
+        updatePreview(value);
       }
     }
   });
+  
+  // Initialize preview
+  if (preview) {
+    updatePreview(picker.value);
+  }
 }
 
 function syncColorText(textId, pickerId, isRgba = false) {
   const text = document.getElementById(textId);
   const picker = document.getElementById(pickerId);
+  const previewId = pickerId + 'Preview';
+  const preview = document.getElementById(previewId);
+  
+  const updatePreview = (colorValue) => {
+    if (preview) {
+      preview.style.backgroundColor = colorValue;
+    }
+  };
   
   text.addEventListener('input', (e) => {
     const value = e.target.value.trim();
@@ -331,6 +368,7 @@ function syncColorText(textId, pickerId, isRgba = false) {
       const hex = rgbaToHex(value);
       if (hex) {
         picker.value = hex;
+        updatePreview(value);
       }
     } else {
       // Validate hex color - only update if it's a valid complete hex color
@@ -338,6 +376,7 @@ function syncColorText(textId, pickerId, isRgba = false) {
       if (value === '' || /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(value)) {
         if (value !== '') {
           picker.value = value;
+          updatePreview(value);
         }
       }
     }
@@ -350,9 +389,15 @@ function syncColorText(textId, pickerId, isRgba = false) {
       if (!/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(value)) {
         // Reset to picker value if invalid
         e.target.value = picker.value;
+        updatePreview(picker.value);
       }
     }
   });
+  
+  // Initialize preview
+  if (preview && text.value) {
+    updatePreview(text.value);
+  }
 }
 
 // Convert hex to RGB
@@ -497,18 +542,45 @@ function initializeFormHandlers() {
     cardBackgroundOpacity.addEventListener('input', (e) => {
       document.getElementById('cardBackgroundOpacityValue').textContent = e.target.value;
       updateCardBackgroundOpacity();
+      // Update preview
+      const preview = document.getElementById('cardBackgroundPreview');
+      if (preview) {
+        const opacity = parseInt(e.target.value) / 100;
+        const hexColor = document.getElementById('cardBackground').value;
+        const rgb = hexToRgb(hexColor);
+        if (rgb) {
+          preview.style.backgroundColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
+        }
+      }
     });
   }
   
   // Update card background color when color picker changes (to update opacity)
   const cardBackgroundPicker = document.getElementById('cardBackground');
   if (cardBackgroundPicker) {
-    cardBackgroundPicker.addEventListener('input', updateCardBackgroundOpacity);
+    cardBackgroundPicker.addEventListener('input', () => {
+      updateCardBackgroundOpacity();
+      // Also update preview directly
+      const preview = document.getElementById('cardBackgroundPreview');
+      const opacity = parseInt(document.getElementById('cardBackgroundOpacity').value) / 100;
+      const hexColor = cardBackgroundPicker.value;
+      const rgb = hexToRgb(hexColor);
+      if (preview && rgb) {
+        preview.style.backgroundColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
+      }
+    });
   }
   
   const cardBackgroundText = document.getElementById('cardBackgroundText');
   if (cardBackgroundText) {
-    cardBackgroundText.addEventListener('input', updateCardBackgroundOpacity);
+    cardBackgroundText.addEventListener('input', () => {
+      updateCardBackgroundOpacity();
+      // Update preview from text value
+      const preview = document.getElementById('cardBackgroundPreview');
+      if (preview) {
+        preview.style.backgroundColor = cardBackgroundText.value;
+      }
+    });
   }
   
   // Shadow intensity slider
@@ -575,6 +647,7 @@ function updateCardBackgroundOpacity() {
   const cardBackgroundOpacity = document.getElementById('cardBackgroundOpacity');
   const cardBackgroundPicker = document.getElementById('cardBackground');
   const cardBackgroundText = document.getElementById('cardBackgroundText');
+  const preview = document.getElementById('cardBackgroundPreview');
   
   if (!cardBackgroundOpacity || !cardBackgroundPicker || !cardBackgroundText) return;
   
@@ -589,6 +662,11 @@ function updateCardBackgroundOpacity() {
     // Update the text input with the new rgba value
     const rgbaValue = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
     cardBackgroundText.value = rgbaValue;
+    
+    // Update preview
+    if (preview) {
+      preview.style.backgroundColor = rgbaValue;
+    }
   }
 }
 
@@ -647,12 +725,13 @@ function initializeAdminSection() {
   // Lock/unlock toggle button
   document.getElementById('lockUnlockBtn').addEventListener('click', () => {
     chrome.storage.sync.get(['adminUnlocked'], (result) => {
-      if (result.adminUnlocked) {
+      // Handle Firefox case where result might be undefined
+      if (result && result.adminUnlocked) {
         lockAdmin();
       } else {
         // Show unlock form if password is set
         chrome.storage.sync.get(['adminPassword'], (pwdResult) => {
-          if (pwdResult.adminPassword) {
+          if (pwdResult && pwdResult.adminPassword) {
             document.getElementById('adminUnlockForm').style.display = 'block';
             document.getElementById('adminUnlockPassword').focus();
           } else {
@@ -700,6 +779,10 @@ function initializeAdminSection() {
 // Load admin state
 function loadAdminState() {
   chrome.storage.sync.get(['adminPassword', 'adminUnlocked'], (result) => {
+    // Handle Firefox case where result might be undefined
+    if (!result) {
+      result = {};
+    }
     const hasPassword = !!result.adminPassword;
     // If no password is set, default to unlocked
     const isUnlocked = hasPassword ? (result.adminUnlocked === true) : true;
@@ -723,7 +806,11 @@ function loadAdminState() {
       document.getElementById('adminPasswordSetup').style.display = 'block';
       document.getElementById('adminUnlockForm').style.display = 'none';
       // Ensure unlocked state is saved
-      chrome.storage.sync.set({ adminUnlocked: true });
+      chrome.storage.sync.set({ adminUnlocked: true }, () => {
+        if (chrome.runtime.lastError) {
+          console.error('Error setting default unlocked state:', chrome.runtime.lastError);
+        }
+      });
     } else {
       document.getElementById('adminPasswordSetup').style.display = 'none';
       if (!isUnlocked) {
@@ -839,16 +926,33 @@ function setAdminPassword() {
   const password = document.getElementById('adminPasswordInput').value;
   
   chrome.storage.sync.set({ adminPassword: password }, () => {
+    // Check for errors in Firefox
+    if (chrome.runtime.lastError) {
+      console.error('Error setting admin password:', chrome.runtime.lastError);
+      showStatus('Error setting password: ' + chrome.runtime.lastError.message, 'error');
+      return;
+    }
+    
     if (password) {
       showStatus('Admin password set successfully! Settings are now locked.', 'success');
       chrome.storage.sync.set({ adminUnlocked: false }, () => {
-        document.getElementById('adminPasswordInput').value = '';
-        loadAdminState();
+        if (chrome.runtime.lastError) {
+          console.error('Error locking settings:', chrome.runtime.lastError);
+          showStatus('Password set, but error locking settings: ' + chrome.runtime.lastError.message, 'error');
+        } else {
+          document.getElementById('adminPasswordInput').value = '';
+          loadAdminState();
+        }
       });
     } else {
       showStatus('Password protection disabled. Settings are now unlocked.', 'success');
       chrome.storage.sync.set({ adminUnlocked: true }, () => {
-        loadAdminState();
+        if (chrome.runtime.lastError) {
+          console.error('Error unlocking settings:', chrome.runtime.lastError);
+          showStatus('Error unlocking settings: ' + chrome.runtime.lastError.message, 'error');
+        } else {
+          loadAdminState();
+        }
       });
     }
   });
@@ -857,11 +961,17 @@ function setAdminPassword() {
 // Unlock admin section
 function unlockAdmin() {
   chrome.storage.sync.get(['adminPassword'], (result) => {
-    if (!result.adminPassword) {
+    // Handle Firefox case where result might be undefined
+    if (!result || !result.adminPassword) {
       // No password set, unlock directly
       chrome.storage.sync.set({ adminUnlocked: true }, () => {
-        loadAdminState();
-        showStatus('Settings unlocked!', 'success');
+        if (chrome.runtime.lastError) {
+          console.error('Error unlocking settings:', chrome.runtime.lastError);
+          showStatus('Error unlocking settings: ' + chrome.runtime.lastError.message, 'error');
+        } else {
+          loadAdminState();
+          showStatus('Settings unlocked!', 'success');
+        }
       });
       return;
     }
@@ -870,9 +980,14 @@ function unlockAdmin() {
     
     if (enteredPassword === result.adminPassword) {
       chrome.storage.sync.set({ adminUnlocked: true }, () => {
-        loadAdminState();
-        document.getElementById('adminUnlockPassword').value = '';
-        showStatus('Settings unlocked! You can now make changes.', 'success');
+        if (chrome.runtime.lastError) {
+          console.error('Error unlocking settings:', chrome.runtime.lastError);
+          showStatus('Error unlocking settings: ' + chrome.runtime.lastError.message, 'error');
+        } else {
+          loadAdminState();
+          document.getElementById('adminUnlockPassword').value = '';
+          showStatus('Settings unlocked! You can now make changes.', 'success');
+        }
       });
     } else {
       showStatus('Incorrect password!', 'error');
@@ -885,15 +1000,21 @@ function unlockAdmin() {
 // Lock admin section
 function lockAdmin() {
   chrome.storage.sync.set({ adminUnlocked: false }, () => {
-    loadAdminState();
-    showStatus('Settings locked! Staff can view but not change settings.', 'success');
+    if (chrome.runtime.lastError) {
+      console.error('Error locking settings:', chrome.runtime.lastError);
+      showStatus('Error locking settings: ' + chrome.runtime.lastError.message, 'error');
+    } else {
+      loadAdminState();
+      showStatus('Settings locked! Staff can view but not change settings.', 'success');
+    }
   });
 }
 
 // Load admin responses
 function loadAdminResponses() {
   chrome.storage.sync.get(['quickResponses', 'adminUnlocked'], (result) => {
-    if (!result.adminUnlocked) {
+    // Handle Firefox case where result might be undefined
+    if (!result || !result.adminUnlocked) {
       return;
     }
     
@@ -1025,16 +1146,39 @@ function openResponseModal(response = null, index = null) {
 
 // Save response
 function saveResponse(index) {
+  // Prevent multiple submissions
+  const submitBtn = document.querySelector('#responseForm button[type="submit"]');
+  if (submitBtn && submitBtn.disabled) {
+    return; // Already processing
+  }
+  
+  // Disable submit button to prevent duplicate submissions
+  let originalText = '';
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Saving...';
+  }
+  
   const title = document.getElementById('responseTitle').value.trim();
   const category = document.getElementById('responseCategory').value.trim();
   const text = document.getElementById('responseText').value.trim();
   
   if (!title || !text) {
     showStatus('Title and text are required!', 'error');
+    // Re-enable submit button
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
+    }
     return;
   }
   
   chrome.storage.sync.get(['quickResponses'], (result) => {
+    // Handle Firefox case where result might be undefined
+    if (!result) {
+      result = {};
+    }
     const responses = result.quickResponses || [];
     
     const responseData = {
@@ -1052,9 +1196,31 @@ function saveResponse(index) {
     }
     
     chrome.storage.sync.set({ quickResponses: responses }, () => {
-      loadAdminResponses();
-      document.getElementById('responseModal').classList.remove('active');
+      // Check for errors (especially in Firefox)
+      if (chrome.runtime.lastError) {
+        console.error('Error saving response:', chrome.runtime.lastError);
+        showStatus('Error saving response. Please try again.', 'error');
+        // Re-enable submit button
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalText;
+        }
+        return;
+      }
+      
+      // Success - close modal and refresh list
+      const modal = document.getElementById('responseModal');
+      if (modal) {
+        modal.classList.remove('active');
+      }
       showStatus(`Response ${index !== null ? 'updated' : 'added'} successfully!`, 'success');
+      loadAdminResponses();
+      
+      // Re-enable submit button
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+      }
     });
   });
 }
@@ -1062,12 +1228,24 @@ function saveResponse(index) {
 // Delete response
 function deleteResponse(index) {
   chrome.storage.sync.get(['quickResponses'], (result) => {
+    // Handle Firefox case where result might be undefined
+    if (!result) {
+      result = {};
+    }
     const responses = result.quickResponses || [];
     responses.splice(index, 1);
     
     chrome.storage.sync.set({ quickResponses: responses }, () => {
-      loadAdminResponses();
+      // Check for errors (especially in Firefox)
+      if (chrome.runtime.lastError) {
+        console.error('Error deleting response:', chrome.runtime.lastError);
+        showStatus('Error deleting response. Please try again.', 'error');
+        return;
+      }
+      
+      // Success - refresh list
       showStatus('Response deleted!', 'success');
+      loadAdminResponses();
     });
   });
 }
@@ -1076,7 +1254,8 @@ function deleteResponse(index) {
 function saveSettings(callback) {
   // Check if settings are locked
   chrome.storage.sync.get(['adminPassword', 'adminUnlocked'], (result) => {
-    if (result.adminPassword && !result.adminUnlocked) {
+    // Handle Firefox case where result might be undefined
+    if (result && result.adminPassword && !result.adminUnlocked) {
       showStatus('Settings are locked! Unlock settings to make changes.', 'error');
       return;
     }
@@ -1096,25 +1275,34 @@ function saveSettings(callback) {
     
     const shadowIntensityEl = document.getElementById('shadowIntensity');
     
+    // Get all form values
+    const primaryColorEl = document.getElementById('primaryColor');
+    const secondaryColorEl = document.getElementById('secondaryColor');
+    const accentColorEl = document.getElementById('accentColor');
+    const backgroundColorTextEl = document.getElementById('backgroundColorText');
+    const cardBackgroundTextEl = document.getElementById('cardBackgroundText');
+    const textPrimaryEl = document.getElementById('textPrimary');
+    const textSecondaryEl = document.getElementById('textSecondary');
+    const textLightTextEl = document.getElementById('textLightText');
+    const borderColorTextEl = document.getElementById('borderColorText');
+    
     const settings = {
-      primaryColor: document.getElementById('primaryColor').value,
-      secondaryColor: document.getElementById('secondaryColor').value,
-      accentColor: document.getElementById('accentColor').value,
-      backgroundColor: document.getElementById('backgroundColorText').value,
-      cardBackground: document.getElementById('cardBackgroundText').value,
-      textPrimary: document.getElementById('textPrimary').value,
-      textSecondary: document.getElementById('textSecondary').value,
-      textLight: document.getElementById('textLightText').value,
-      borderColor: document.getElementById('borderColorText').value,
+      primaryColor: primaryColorEl?.value || '',
+      secondaryColor: secondaryColorEl?.value || '',
+      accentColor: accentColorEl?.value || '',
+      backgroundColor: backgroundColorTextEl?.value || '',
+      cardBackground: cardBackgroundTextEl?.value || '',
+      textPrimary: textPrimaryEl?.value || '',
+      textSecondary: textSecondaryEl?.value || '',
+      textLight: textLightTextEl?.value || '',
+      borderColor: borderColorTextEl?.value || '',
       shadowIntensity: shadowIntensityEl ? parseInt(shadowIntensityEl.value) : 15,
       borderRadius: document.getElementById('borderRadius') ? parseInt(document.getElementById('borderRadius').value) : 8,
       backgroundImage: backgroundImageValue,
-      userName: document.getElementById('userName').value,
-      todoistApiKey: document.getElementById('todoistApiKey').value,
-      cardVisibilityTrackers: document.getElementById('cardVisibilityTrackers').checked,
-      cardVisibilityNotes: document.getElementById('cardVisibilityNotes').checked,
-      cardVisibilityLinks: document.getElementById('cardVisibilityLinks').checked,
-      cardVisibilityTodoist: document.getElementById('cardVisibilityTodoist').checked,
+      userName: document.getElementById('userName').value || 'Team',
+      todoistApiKey: document.getElementById('todoistApiKey').value || '',
+      // Card visibility is now handled by updateCardVisibility() in card order system
+      // cardOrder and textCards are saved separately when changed
       overlayEnabled: overlayEnabledEl ? overlayEnabledEl.checked : true,
       overlayOpacity: overlayOpacityEl ? parseInt(overlayOpacityEl.value) : 20,
       customHeaderTitle: document.getElementById('customHeaderTitle').value.trim(),
@@ -1122,11 +1310,33 @@ function saveSettings(callback) {
       businessInfoLine1: document.getElementById('businessInfoLine1').value.trim(),
       businessInfoLine2: document.getElementById('businessInfoLine2').value.trim(),
       businessInfoLine3: document.getElementById('businessInfoLine3').value.trim(),
-      businessInfoLine4: document.getElementById('businessInfoLine4').value.trim()
+      businessInfoLine4: document.getElementById('businessInfoLine4').value.trim(),
+      companyLogoUrl: document.getElementById('companyLogoUrl').value.trim()
     };
     
     // Remove backgroundImage from sync settings (it's too large for sync storage)
     const { backgroundImage, ...syncSettings } = settings;
+    
+    // Filter out empty strings and invalid values - Firefox may reject saves with empty strings
+    const cleanedSyncSettings = {};
+    for (const [key, value] of Object.entries(syncSettings)) {
+      // Only include non-empty values (except for booleans, numbers, and arrays)
+      if (value !== '' && value !== null && value !== undefined) {
+        cleanedSyncSettings[key] = value;
+      } else if (typeof value === 'boolean' || typeof value === 'number' || Array.isArray(value)) {
+        // Always include booleans, numbers, and arrays (even if falsy)
+        cleanedSyncSettings[key] = value;
+      }
+    }
+    
+    // Validate that we have at least some settings to save
+    if (Object.keys(cleanedSyncSettings).length === 0) {
+      showStatus('Error: No valid settings to save. Please check your form values.', 'error');
+      if (callback && typeof callback === 'function') {
+        callback();
+      }
+      return;
+    }
     
     // Save background image to local storage (supports up to 10MB per item)
     const backgroundImagePromise = backgroundImageValue && backgroundImageValue.trim()
@@ -1139,7 +1349,17 @@ function saveSettings(callback) {
       : chrome.storage.local.remove('companyLogo');
     
     // Save other settings to sync storage
-    chrome.storage.sync.set(syncSettings, () => {
+    chrome.storage.sync.set(cleanedSyncSettings, () => {
+      // Check for errors in Firefox
+      if (chrome.runtime.lastError) {
+        console.error('Error saving settings:', chrome.runtime.lastError);
+        showStatus('Error saving settings: ' + chrome.runtime.lastError.message, 'error');
+        if (callback && typeof callback === 'function') {
+          callback();
+        }
+        return;
+      }
+      
       // Save background image and logo to local storage
       Promise.all([backgroundImagePromise, companyLogoPromise]).then(() => {
         // Reload brand colors to apply border-radius and other changes immediately
@@ -1166,6 +1386,10 @@ function saveSettings(callback) {
 function resetSettings() {
   // Check if settings are locked
   chrome.storage.sync.get(['adminPassword', 'adminUnlocked'], (result) => {
+    // Handle Firefox case where result might be undefined
+    if (!result) {
+      result = {};
+    }
     const hasPassword = !!result.adminPassword;
     const isUnlocked = hasPassword ? (result.adminUnlocked === true) : true;
     
@@ -1212,6 +1436,10 @@ function resetSettings() {
 // Export settings
 function exportSettings() {
   chrome.storage.sync.get(null, (allData) => {
+    // Handle Firefox case where allData might be undefined
+    if (!allData) {
+      allData = {};
+    }
     // Filter out sensitive data if needed
     const exportData = {
       ...allData,
@@ -1362,6 +1590,10 @@ function updateDayDropdown() {
 
 function loadTrackers() {
   chrome.storage.sync.get(['countdowns', 'adminUnlocked'], (result) => {
+    // Handle Firefox case where result might be undefined
+    if (!result) {
+      result = {};
+    }
     const countdowns = result.countdowns || [];
     const isUnlocked = result.adminUnlocked !== false; // Default to unlocked if no password
     
@@ -1447,7 +1679,10 @@ function createCountdownItem(countdown, index) {
   // Edit button
   div.querySelector('[data-action="edit"]').addEventListener('click', () => {
     chrome.storage.sync.get(['countdowns'], (result) => {
-      openCountdownModal(result.countdowns[index], index);
+      // Handle Firefox case where result might be undefined
+      if (result && result.countdowns && result.countdowns[index]) {
+        openCountdownModal(result.countdowns[index], index);
+      }
     });
   });
   
@@ -1659,6 +1894,20 @@ function openCountdownModal(countdown = null, index = null) {
 }
 
 function saveCountdown() {
+  // Prevent multiple submissions
+  const submitBtn = document.querySelector('#countdownForm button[type="submit"]');
+  if (submitBtn && submitBtn.disabled) {
+    return; // Already processing
+  }
+  
+  // Disable submit button to prevent duplicate submissions
+  let originalText = '';
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Saving...';
+  }
+  
   const name = document.getElementById('countdownName').value.trim();
   const type = document.getElementById('countdownType').value;
   const month = parseInt(document.getElementById('countdownMonth').value);
@@ -1672,6 +1921,11 @@ function saveCountdown() {
   
   if (!name || isNaN(month) || isNaN(day) || isNaN(year)) {
     showStatus('Please fill in all required fields', 'error');
+    // Re-enable submit button
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
+    }
     return;
   }
   
@@ -1685,6 +1939,10 @@ function saveCountdown() {
   const targetDate = new Date(year, month, day, hours || 0, minutes || 0);
   
   chrome.storage.sync.get(['countdowns'], (result) => {
+    // Handle Firefox case where result might be undefined
+    if (!result) {
+      result = {};
+    }
     const countdowns = result.countdowns || [];
     
     const countdownData = {
@@ -1709,9 +1967,31 @@ function saveCountdown() {
     }
     
     chrome.storage.sync.set({ countdowns }, () => {
+      // Check for errors (especially in Firefox)
+      if (chrome.runtime.lastError) {
+        console.error('Error saving countdown:', chrome.runtime.lastError);
+        showStatus('Error saving countdown. Please try again.', 'error');
+        // Re-enable submit button
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalText;
+        }
+        return;
+      }
+      
+      // Success - close modal and refresh list
+      const modal = document.getElementById('countdownModal');
+      if (modal) {
+        modal.classList.remove('active');
+      }
       showStatus(`Countdown ${id !== '' ? 'updated' : 'added'} successfully!`, 'success');
       loadCountdowns();
-      document.getElementById('countdownModal').classList.remove('active');
+      
+      // Re-enable submit button
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+      }
     });
   });
 }
@@ -1722,10 +2002,22 @@ function deleteCountdown(index) {
   }
   
   chrome.storage.sync.get(['countdowns'], (result) => {
+    // Handle Firefox case where result might be undefined
+    if (!result) {
+      result = {};
+    }
     const countdowns = result.countdowns || [];
     countdowns.splice(index, 1);
     
     chrome.storage.sync.set({ countdowns }, () => {
+      // Check for errors (especially in Firefox)
+      if (chrome.runtime.lastError) {
+        console.error('Error deleting countdown:', chrome.runtime.lastError);
+        showStatus('Error deleting countdown. Please try again.', 'error');
+        return;
+      }
+      
+      // Success - refresh list
       showStatus('Countdown deleted', 'success');
       loadCountdowns();
     });
@@ -1735,7 +2027,8 @@ function deleteCountdown(index) {
 // Links Management
 function loadLinks() {
   chrome.storage.sync.get(['links', 'adminUnlocked'], (result) => {
-    if (!result.adminUnlocked) {
+    // Handle Firefox case where result might be undefined
+    if (!result || !result.adminUnlocked) {
       return;
     }
     
@@ -1919,6 +2212,20 @@ function addUrlInput(value = '', isLast = true) {
 }
 
 function saveLink(index) {
+  // Prevent multiple submissions
+  const submitBtn = document.querySelector('#linkForm button[type="submit"]');
+  if (submitBtn && submitBtn.disabled) {
+    return; // Already processing
+  }
+  
+  // Disable submit button to prevent duplicate submissions
+  let originalText = '';
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Saving...';
+  }
+  
   const name = document.getElementById('linkName').value.trim();
   const icon = document.getElementById('linkIcon').value.trim();
   
@@ -1930,11 +2237,21 @@ function saveLink(index) {
   
   if (!name) {
     showStatus('Name is required!', 'error');
+    // Re-enable submit button
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
+    }
     return;
   }
   
   if (urls.length === 0) {
     showStatus('At least one URL is required!', 'error');
+    // Re-enable submit button
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
+    }
     return;
   }
   
@@ -1947,6 +2264,10 @@ function saveLink(index) {
   });
   
   chrome.storage.sync.get(['links'], (result) => {
+    // Handle Firefox case where result might be undefined
+    if (!result) {
+      result = {};
+    }
     const links = result.links || [];
     
     const linkData = { name, urls: normalizedUrls };
@@ -1961,20 +2282,54 @@ function saveLink(index) {
     }
     
     chrome.storage.sync.set({ links }, () => {
-      loadLinks();
-      document.getElementById('linkModal').classList.remove('active');
+      // Check for errors (especially in Firefox)
+      if (chrome.runtime.lastError) {
+        console.error('Error saving link:', chrome.runtime.lastError);
+        showStatus('Error saving link. Please try again.', 'error');
+        // Re-enable submit button
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalText;
+        }
+        return;
+      }
+      
+      // Success - close modal and refresh list
+      const modal = document.getElementById('linkModal');
+      if (modal) {
+        modal.classList.remove('active');
+      }
       showStatus(`Link ${index !== null ? 'updated' : 'added'} successfully!`, 'success');
+      loadLinks();
+      
+      // Re-enable submit button
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+      }
     });
   });
 }
 
 function deleteLink(index) {
   chrome.storage.sync.get(['links'], (result) => {
+    // Handle Firefox case where result might be undefined
+    if (!result) {
+      result = {};
+    }
     const links = result.links || [];
     links.splice(index, 1);
     chrome.storage.sync.set({ links }, () => {
-      loadLinks();
+      // Check for errors (especially in Firefox)
+      if (chrome.runtime.lastError) {
+        console.error('Error deleting link:', chrome.runtime.lastError);
+        showStatus('Error deleting link. Please try again.', 'error');
+        return;
+      }
+      
+      // Success - refresh list
       showStatus('Link deleted successfully!', 'success');
+      loadLinks();
     });
   });
 }
@@ -2105,6 +2460,10 @@ function saveBatchLinks() {
   }
   
   chrome.storage.sync.get(['links'], (result) => {
+    // Handle Firefox case where result might be undefined
+    if (!result) {
+      result = {};
+    }
     const links = result.links || [];
     links.push(...newLinks);
     chrome.storage.sync.set({ links }, () => {
@@ -2118,7 +2477,8 @@ function saveBatchLinks() {
 // Notes Management
 function loadNotes() {
   chrome.storage.sync.get(['notes', 'adminUnlocked'], (result) => {
-    if (!result.adminUnlocked) {
+    // Handle Firefox case where result might be undefined
+    if (!result || !result.adminUnlocked) {
       return;
     }
     
@@ -2244,12 +2604,31 @@ function openNoteModal(note = null, index = null) {
 }
 
 function saveNote(index) {
+  // Prevent multiple submissions
+  const submitBtn = document.querySelector('#noteForm button[type="submit"]');
+  if (submitBtn && submitBtn.disabled) {
+    return; // Already processing
+  }
+  
+  // Disable submit button to prevent duplicate submissions
+  let originalText = '';
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Saving...';
+  }
+  
   const title = document.getElementById('noteTitle').value.trim();
   const content = document.getElementById('noteContent').value.trim();
   let url = document.getElementById('noteUrl').value.trim();
   
   if (!title || !content) {
     showStatus('Title and content are required!', 'error');
+    // Re-enable submit button
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
+    }
     return;
   }
   
@@ -2259,6 +2638,10 @@ function saveNote(index) {
   }
   
   chrome.storage.sync.get(['notes'], (result) => {
+    // Handle Firefox case where result might be undefined
+    if (!result) {
+      result = {};
+    }
     const notes = result.notes || [];
     
     const noteData = { title, content };
@@ -2274,20 +2657,54 @@ function saveNote(index) {
     }
     
     chrome.storage.sync.set({ notes }, () => {
-      loadNotes();
-      document.getElementById('noteModal').classList.remove('active');
+      // Check for errors (especially in Firefox)
+      if (chrome.runtime.lastError) {
+        console.error('Error saving note:', chrome.runtime.lastError);
+        showStatus('Error saving note. Please try again.', 'error');
+        // Re-enable submit button
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalText;
+        }
+        return;
+      }
+      
+      // Success - close modal and refresh list
+      const modal = document.getElementById('noteModal');
+      if (modal) {
+        modal.classList.remove('active');
+      }
       showStatus(`Note ${index !== null ? 'updated' : 'added'} successfully!`, 'success');
+      loadNotes();
+      
+      // Re-enable submit button
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+      }
     });
   });
 }
 
 function deleteNote(index) {
   chrome.storage.sync.get(['notes'], (result) => {
+    // Handle Firefox case where result might be undefined
+    if (!result) {
+      result = {};
+    }
     const notes = result.notes || [];
     notes.splice(index, 1);
     chrome.storage.sync.set({ notes }, () => {
-      loadNotes();
+      // Check for errors (especially in Firefox)
+      if (chrome.runtime.lastError) {
+        console.error('Error deleting note:', chrome.runtime.lastError);
+        showStatus('Error deleting note. Please try again.', 'error');
+        return;
+      }
+      
+      // Success - refresh list
       showStatus('Note deleted successfully!', 'success');
+      loadNotes();
     });
   });
 }
@@ -2414,5 +2831,595 @@ function updateBackgroundImagePreview() {
   } else {
     preview.style.display = 'none';
   }
+}
+
+// Initialize navigation menu
+function initializeNavigation() {
+  const navLinks = document.querySelectorAll('.nav-link');
+  const sections = document.querySelectorAll('.settings-section[id]');
+  
+  // Update active link on scroll
+  function updateActiveLink() {
+    let current = '';
+    sections.forEach(section => {
+      const sectionTop = section.offsetTop;
+      const sectionHeight = section.clientHeight;
+      if (window.pageYOffset >= sectionTop - 200) {
+        current = section.getAttribute('id');
+      }
+    });
+    
+    navLinks.forEach(link => {
+      link.classList.remove('active');
+      if (link.getAttribute('href') === `#${current}`) {
+        link.classList.add('active');
+      }
+    });
+  }
+  
+  // Smooth scroll on click
+  navLinks.forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const targetId = link.getAttribute('href');
+      const targetSection = document.querySelector(targetId);
+      if (targetSection) {
+        const offsetTop = targetSection.offsetTop - 100;
+        window.scrollTo({
+          top: offsetTop,
+          behavior: 'smooth'
+        });
+      }
+    });
+  });
+  
+  // Update on scroll
+  window.addEventListener('scroll', () => {
+    updateActiveLink();
+    updateScrollToTopButton();
+  });
+  updateActiveLink(); // Initial update
+  updateScrollToTopButton(); // Initial update
+  
+  // Initialize scroll to top button
+  const scrollButton = document.getElementById('scrollToTop');
+  if (scrollButton) {
+    scrollButton.addEventListener('click', () => {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    });
+  }
+}
+
+// Scroll to top button visibility
+function updateScrollToTopButton() {
+  const scrollButton = document.getElementById('scrollToTop');
+  if (!scrollButton) return;
+  
+  if (window.pageYOffset > 300) {
+    scrollButton.classList.add('show');
+  } else {
+    scrollButton.classList.remove('show');
+  }
+}
+
+// Card Order Management
+const defaultCardOrder = [
+  { id: 'trackers', name: 'Trackers', type: 'system' },
+  { id: 'notes', name: 'Notes', type: 'system' },
+  { id: 'links', name: 'Quick Links', type: 'system' },
+  { id: 'todoist', name: 'Todoist', type: 'system' }
+];
+
+function initializeCardOrder() {
+  loadCardOrder();
+  setupCardOrderDragDrop();
+  
+  // Add button handler for adding text cards
+  const addTextCardBtn = document.getElementById('addTextCardBtn');
+  if (addTextCardBtn) {
+    addTextCardBtn.addEventListener('click', () => {
+      addTextCard();
+    });
+  }
+}
+
+function loadCardOrder() {
+  chrome.storage.sync.get(['cardOrder', 'cardVisibilityTrackers', 'cardVisibilityNotes', 'cardVisibilityLinks', 'cardVisibilityTodoist', 'textCards'], (result) => {
+    if (!result) {
+      result = {};
+    }
+    
+    // Get card order or use default
+    let cardOrder = result.cardOrder || defaultCardOrder.map(c => c.id);
+    
+    // Get text cards
+    const textCards = result.textCards || [];
+    
+    // Build full card list including text cards
+    const allCards = [];
+    const systemCards = {
+      'trackers': { id: 'trackers', name: 'Trackers', type: 'system' },
+      'notes': { id: 'notes', name: 'Notes', type: 'system' },
+      'links': { id: 'links', name: 'Quick Links', type: 'system' },
+      'todoist': { id: 'todoist', name: 'Todoist', type: 'system' }
+    };
+    
+    // Add system cards in order
+    cardOrder.forEach(cardId => {
+      if (systemCards[cardId]) {
+        allCards.push(systemCards[cardId]);
+      }
+    });
+    
+    // Add text cards
+    textCards.forEach((textCard, index) => {
+      allCards.push({
+        id: `text-${textCard.id}`,
+        name: textCard.title || 'Text Card',
+        type: 'text',
+        textCardId: textCard.id
+      });
+    });
+    
+    // Render the list
+    renderCardOrderList(allCards, result);
+  });
+}
+
+function renderCardOrderList(cards, settings) {
+  const listContainer = document.getElementById('cardOrderList');
+  if (!listContainer) return;
+  
+  listContainer.innerHTML = '';
+  
+  cards.forEach((card) => {
+    const item = document.createElement('div');
+    item.className = 'card-order-item';
+    item.dataset.cardId = card.id;
+    item.draggable = true;
+    
+    // Get visibility state
+    let isVisible = true;
+    if (card.type === 'system') {
+      const visibilityKey = `cardVisibility${card.id.charAt(0).toUpperCase() + card.id.slice(1)}`;
+      isVisible = settings[visibilityKey] !== false;
+    } else if (card.type === 'text') {
+      const textCard = (settings.textCards || []).find(tc => tc.id === card.textCardId);
+      isVisible = textCard ? (textCard.visible !== false) : true;
+    }
+    
+    item.innerHTML = `
+      <div class="card-order-handle" title="Drag to reorder"></div>
+      <div class="card-order-info">
+        <span class="card-order-name">${card.name}</span>
+        <span class="card-order-type">${card.type === 'system' ? 'System' : 'Text Card'}</span>
+      </div>
+      <label class="toggle-label card-order-toggle" style="margin: 0; justify-content: flex-end;">
+        <input type="checkbox" ${isVisible ? 'checked' : ''} data-card-id="${card.id}" data-card-type="${card.type}" ${card.type === 'text' ? `data-text-card-id="${card.textCardId}"` : ''}>
+        <span class="toggle-switch"></span>
+      </label>
+    `;
+    
+    // Add toggle handler
+    const checkbox = item.querySelector('input[type="checkbox"]');
+    checkbox.addEventListener('change', (e) => {
+      updateCardVisibility(card.id, card.type, e.target.checked, card.textCardId);
+    });
+    
+    listContainer.appendChild(item);
+  });
+  
+  // Re-setup drag and drop after rendering
+  setupCardOrderDragDrop();
+}
+
+function setupCardOrderDragDrop() {
+  const listContainer = document.getElementById('cardOrderList');
+  if (!listContainer) return;
+  
+  const items = listContainer.querySelectorAll('.card-order-item');
+  let draggedElement = null;
+  
+  items.forEach(item => {
+    item.addEventListener('dragstart', (e) => {
+      draggedElement = item;
+      item.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/html', item.innerHTML);
+    });
+    
+    item.addEventListener('dragend', () => {
+      item.classList.remove('dragging');
+      items.forEach(i => i.classList.remove('drag-over'));
+    });
+    
+    item.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      
+      const afterElement = getDragAfterElement(listContainer, e.clientY);
+      const dragging = document.querySelector('.dragging');
+      
+      if (dragging) {
+        if (afterElement == null) {
+          listContainer.appendChild(dragging);
+        } else {
+          listContainer.insertBefore(dragging, afterElement);
+        }
+      }
+      
+      item.classList.add('drag-over');
+    });
+    
+    item.addEventListener('dragleave', () => {
+      item.classList.remove('drag-over');
+    });
+    
+    item.addEventListener('drop', (e) => {
+      e.preventDefault();
+      item.classList.remove('drag-over');
+      
+      if (draggedElement && draggedElement !== item) {
+        const afterElement = getDragAfterElement(listContainer, e.clientY);
+        
+        if (afterElement == null) {
+          listContainer.appendChild(draggedElement);
+        } else {
+          listContainer.insertBefore(draggedElement, afterElement);
+        }
+        
+        saveCardOrder();
+      }
+    });
+  });
+}
+
+function getDragAfterElement(container, y) {
+  const draggableElements = [...container.querySelectorAll('.card-order-item:not(.dragging)')];
+  
+  return draggableElements.reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+    
+    if (offset < 0 && offset > closest.offset) {
+      return { offset: offset, element: child };
+    } else {
+      return closest;
+    }
+  }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+function saveCardOrder() {
+  const listContainer = document.getElementById('cardOrderList');
+  if (!listContainer) return;
+  
+  const items = listContainer.querySelectorAll('.card-order-item');
+  const cardOrder = [];
+  
+  items.forEach(item => {
+    const cardId = item.dataset.cardId;
+    if (cardId && !cardId.startsWith('text-')) {
+      cardOrder.push(cardId);
+    }
+  });
+  
+  chrome.storage.sync.set({ cardOrder }, () => {
+    if (chrome.runtime.lastError) {
+      console.error('Error saving card order:', chrome.runtime.lastError);
+    }
+  });
+}
+
+function updateCardVisibility(cardId, cardType, isVisible, textCardId) {
+  if (cardType === 'system') {
+    const visibilityKey = `cardVisibility${cardId.charAt(0).toUpperCase() + cardId.slice(1)}`;
+    chrome.storage.sync.set({ [visibilityKey]: isVisible }, () => {
+      if (chrome.runtime.lastError) {
+        console.error('Error updating card visibility:', chrome.runtime.lastError);
+      }
+    });
+  } else if (cardType === 'text' && textCardId) {
+    chrome.storage.sync.get(['textCards'], (result) => {
+      if (!result) {
+        result = {};
+      }
+      const textCards = result.textCards || [];
+      const cardIndex = textCards.findIndex(tc => tc.id === textCardId);
+      
+      if (cardIndex !== -1) {
+        textCards[cardIndex].visible = isVisible;
+        chrome.storage.sync.set({ textCards }, () => {
+          if (chrome.runtime.lastError) {
+            console.error('Error updating text card visibility:', chrome.runtime.lastError);
+          }
+        });
+      }
+    });
+  }
+}
+
+// Text Cards Management
+let textCardIdCounter = 0;
+
+function initializeTextCards() {
+  loadTextCards();
+}
+
+function loadTextCards() {
+  chrome.storage.sync.get(['textCards'], (result) => {
+    if (!result) {
+      result = {};
+    }
+    const textCards = result.textCards || [];
+    
+    // Find max ID to set counter
+    if (textCards.length > 0) {
+      const maxId = Math.max(...textCards.map(tc => parseInt(tc.id) || 0));
+      textCardIdCounter = maxId + 1;
+    }
+    
+    renderTextCardsList(textCards);
+  });
+}
+
+function renderTextCardsList(textCards) {
+  const listContainer = document.getElementById('textCardsList');
+  if (!listContainer) return;
+  
+  listContainer.innerHTML = '';
+  
+  textCards.forEach((textCard) => {
+    const item = createTextCardItem(textCard);
+    listContainer.appendChild(item);
+  });
+}
+
+function createTextCardItem(textCard) {
+  const item = document.createElement('div');
+  item.className = 'text-card-item';
+  item.dataset.textCardId = textCard.id;
+  
+  item.innerHTML = `
+    <div class="text-card-header">
+      <input type="text" class="text-card-title-input" value="${escapeHtml(textCard.title || '')}" placeholder="Card Title" data-text-card-id="${textCard.id}">
+      <button class="delete-text-card-btn" data-text-card-id="${textCard.id}" title="Delete text card">🗑️</button>
+    </div>
+    <div class="text-card-content">
+      <textarea class="text-card-content-input" placeholder="Enter card content (supports HTML)" data-text-card-id="${textCard.id}">${escapeHtml(textCard.content || '')}</textarea>
+    </div>
+  `;
+  
+  // Add event handlers
+  const titleInput = item.querySelector('.text-card-title-input');
+  const contentInput = item.querySelector('.text-card-content-input');
+  const deleteBtn = item.querySelector('.delete-text-card-btn');
+  
+  titleInput.addEventListener('input', debounce(() => {
+    saveTextCard(textCard.id, titleInput.value, contentInput.value);
+  }, 500));
+  
+  contentInput.addEventListener('input', debounce(() => {
+    saveTextCard(textCard.id, titleInput.value, contentInput.value);
+  }, 500));
+  
+  deleteBtn.addEventListener('click', () => {
+    deleteTextCard(textCard.id);
+  });
+  
+  return item;
+}
+
+function addTextCard() {
+  const newId = textCardIdCounter++;
+  const newCard = {
+    id: newId.toString(),
+    title: '',
+    content: '',
+    visible: true
+  };
+  
+  chrome.storage.sync.get(['textCards'], (result) => {
+    if (!result) {
+      result = {};
+    }
+    const textCards = result.textCards || [];
+    textCards.push(newCard);
+    
+    chrome.storage.sync.set({ textCards }, () => {
+      if (chrome.runtime.lastError) {
+        console.error('Error adding text card:', chrome.runtime.lastError);
+      } else {
+        // Add to card order
+        chrome.storage.sync.get(['cardOrder'], (result) => {
+          if (!result) {
+            result = {};
+          }
+          const cardOrder = result.cardOrder || defaultCardOrder.map(c => c.id);
+          cardOrder.push(`text-${newId}`);
+          chrome.storage.sync.set({ cardOrder }, () => {
+            loadCardOrder();
+            loadTextCards();
+          });
+        });
+      }
+    });
+  });
+}
+
+function saveTextCard(id, title, content) {
+  chrome.storage.sync.get(['textCards'], (result) => {
+    if (!result) {
+      result = {};
+    }
+    const textCards = result.textCards || [];
+    const cardIndex = textCards.findIndex(tc => tc.id === id);
+    
+    if (cardIndex !== -1) {
+      textCards[cardIndex].title = title;
+      textCards[cardIndex].content = content;
+    } else {
+      textCards.push({ id, title, content, visible: true });
+    }
+    
+    chrome.storage.sync.set({ textCards }, () => {
+      if (chrome.runtime.lastError) {
+        console.error('Error saving text card:', chrome.runtime.lastError);
+      } else {
+        // Update card order list to reflect title change
+        loadCardOrder();
+      }
+    });
+  });
+}
+
+function deleteTextCard(id) {
+  if (!confirm('Are you sure you want to delete this text card?')) {
+    return;
+  }
+  
+  chrome.storage.sync.get(['textCards', 'cardOrder'], (result) => {
+    if (!result) {
+      result = {};
+    }
+    const textCards = (result.textCards || []).filter(tc => tc.id !== id);
+    const cardOrder = (result.cardOrder || []).filter(cardId => cardId !== `text-${id}`);
+    
+    chrome.storage.sync.set({ textCards, cardOrder }, () => {
+      if (chrome.runtime.lastError) {
+        console.error('Error deleting text card:', chrome.runtime.lastError);
+      } else {
+        loadCardOrder();
+        loadTextCards();
+      }
+    });
+  });
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+// Initialize collapsible sections with auto-collapse
+function initializeCollapsibleSections() {
+  const sections = document.querySelectorAll('.settings-section:not(.admin-lock-section)');
+  
+  // Wrap content in section-content div if not already wrapped
+  sections.forEach(section => {
+    const h2 = section.querySelector('h2');
+    if (!h2) return;
+    
+    // Check if content is already wrapped
+    if (section.querySelector('.section-content')) {
+      // Content already wrapped, just add click handler
+      h2.addEventListener('click', () => {
+        toggleSection(section);
+      });
+      return;
+    }
+    
+    // Get all content after h2
+    const fragment = document.createDocumentFragment();
+    let node = h2.nextSibling;
+    while (node) {
+      const nextSibling = node.nextSibling;
+      fragment.appendChild(node);
+      node = nextSibling;
+    }
+    
+    if (fragment.childNodes.length === 0) {
+      // No content to wrap, just add click handler
+      h2.addEventListener('click', () => {
+        toggleSection(section);
+      });
+      return;
+    }
+    
+    // Create wrapper
+    const wrapper = document.createElement('div');
+    wrapper.className = 'section-content';
+    wrapper.appendChild(fragment);
+    
+    // Insert wrapper after h2
+    h2.parentNode.insertBefore(wrapper, h2.nextSibling);
+    
+    // Add click handler to h2
+    h2.addEventListener('click', () => {
+      toggleSection(section);
+    });
+  });
+  
+  // Load saved expanded state or default to first section
+  chrome.storage.local.get(['expandedSection'], (result) => {
+    let sectionToExpand = null;
+    
+    if (result && result.expandedSection) {
+      sectionToExpand = document.getElementById(result.expandedSection);
+    }
+    
+    // If no saved section or saved section not found, use first section
+    if (!sectionToExpand && sections.length > 0) {
+      sectionToExpand = sections[0];
+    }
+    
+    // Expand the selected section and collapse others
+    if (sectionToExpand) {
+      expandSection(sectionToExpand);
+      collapseOtherSections(sectionToExpand);
+    } else {
+      // Collapse all by default
+      sections.forEach(section => {
+        collapseSection(section);
+      });
+    }
+  });
+}
+
+function toggleSection(section) {
+  if (section.classList.contains('collapsed')) {
+    // Expand this section and collapse others
+    expandSection(section);
+    collapseOtherSections(section);
+  } else {
+    // Collapse this section
+    collapseSection(section);
+  }
+}
+
+function expandSection(section) {
+  section.classList.remove('collapsed');
+  const sectionId = section.id;
+  if (sectionId) {
+    chrome.storage.local.set({ expandedSection: sectionId });
+  }
+}
+
+function collapseSection(section) {
+  section.classList.add('collapsed');
+}
+
+function collapseOtherSections(currentSection) {
+  const sections = document.querySelectorAll('.settings-section:not(.admin-lock-section)');
+  sections.forEach(section => {
+    if (section !== currentSection) {
+      collapseSection(section);
+    }
+  });
 }
 

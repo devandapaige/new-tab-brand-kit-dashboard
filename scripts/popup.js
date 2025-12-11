@@ -8,11 +8,29 @@ document.addEventListener('DOMContentLoaded', () => {
   loadResponses();
   initializeSearch();
   initializeAdminButton();
+  initializeLogoClick();
 });
+
+// Initialize logo click handler
+function initializeLogoClick() {
+  const companyLogoLink = document.getElementById('popupCompanyLogoLink');
+  if (companyLogoLink) {
+    companyLogoLink.addEventListener('click', (e) => {
+      // Only prevent default if there's no valid URL
+      if (!companyLogoLink.href || companyLogoLink.href === '#' || companyLogoLink.style.pointerEvents === 'none') {
+        e.preventDefault();
+      }
+    });
+  }
+}
 
 // Load brand colors and apply to popup
 function loadBrandColors() {
   chrome.storage.sync.get(['primaryColor', 'secondaryColor', 'accentColor', 'borderRadius'], (result) => {
+    // Handle Firefox case where result might be undefined
+    if (!result) {
+      result = {};
+    }
     const root = document.documentElement;
     
     if (result.primaryColor) {
@@ -34,14 +52,36 @@ function loadBrandColors() {
     root.style.setProperty('--border-radius-lg', `${Math.round(borderRadius * 1.5)}px`);
   });
   
-  // Load company logo from local storage
+  // Load company logo from local storage and URL from sync storage
   chrome.storage.local.get(['companyLogo'], (localResult) => {
+    // Handle Firefox case where localResult might be undefined
+    if (!localResult) {
+      localResult = {};
+    }
     const companyLogoEl = document.getElementById('popupCompanyLogo');
-    if (companyLogoEl && localResult.companyLogo) {
+    const companyLogoLink = document.getElementById('popupCompanyLogoLink');
+    
+    if (companyLogoEl && companyLogoLink && localResult.companyLogo) {
       companyLogoEl.src = localResult.companyLogo;
-      companyLogoEl.style.display = 'block';
-    } else if (companyLogoEl) {
-      companyLogoEl.style.display = 'none';
+      companyLogoLink.style.display = 'block';
+      
+      // Load logo URL
+      chrome.storage.sync.get(['companyLogoUrl'], (syncResult) => {
+        if (!syncResult) {
+          syncResult = {};
+        }
+        if (syncResult.companyLogoUrl && syncResult.companyLogoUrl.trim()) {
+          companyLogoLink.href = syncResult.companyLogoUrl.trim();
+          companyLogoLink.style.cursor = 'pointer';
+          companyLogoEl.style.cursor = 'pointer';
+        } else {
+          companyLogoLink.href = '#';
+          companyLogoLink.style.pointerEvents = 'none';
+          companyLogoEl.style.cursor = 'default';
+        }
+      });
+    } else if (companyLogoLink) {
+      companyLogoLink.style.display = 'none';
     }
   });
   
@@ -49,12 +89,44 @@ function loadBrandColors() {
   chrome.storage.onChanged.addListener((changes, areaName) => {
     if (areaName === 'local' && changes.companyLogo) {
       const companyLogoEl = document.getElementById('popupCompanyLogo');
-      if (companyLogoEl) {
+      const companyLogoLink = document.getElementById('popupCompanyLogoLink');
+      if (companyLogoEl && companyLogoLink) {
         if (changes.companyLogo.newValue) {
           companyLogoEl.src = changes.companyLogo.newValue;
-          companyLogoEl.style.display = 'block';
+          companyLogoLink.style.display = 'block';
+          // Reload logo URL
+          chrome.storage.sync.get(['companyLogoUrl'], (result) => {
+            if (result && result.companyLogoUrl && result.companyLogoUrl.trim()) {
+              companyLogoLink.href = result.companyLogoUrl.trim();
+              companyLogoLink.style.cursor = 'pointer';
+              companyLogoEl.style.cursor = 'pointer';
+              companyLogoLink.style.pointerEvents = 'auto';
+            } else {
+              companyLogoLink.href = '#';
+              companyLogoLink.style.pointerEvents = 'none';
+              companyLogoEl.style.cursor = 'default';
+            }
+          });
         } else {
-          companyLogoEl.style.display = 'none';
+          companyLogoLink.style.display = 'none';
+        }
+      }
+    }
+    
+    // Listen for logo URL changes
+    if (areaName === 'sync' && changes.companyLogoUrl) {
+      const companyLogoLink = document.getElementById('popupCompanyLogoLink');
+      const companyLogoEl = document.getElementById('popupCompanyLogo');
+      if (companyLogoLink && companyLogoEl && companyLogoLink.style.display !== 'none') {
+        if (changes.companyLogoUrl.newValue && changes.companyLogoUrl.newValue.trim()) {
+          companyLogoLink.href = changes.companyLogoUrl.newValue.trim();
+          companyLogoLink.style.cursor = 'pointer';
+          companyLogoEl.style.cursor = 'pointer';
+          companyLogoLink.style.pointerEvents = 'auto';
+        } else {
+          companyLogoLink.href = '#';
+          companyLogoLink.style.pointerEvents = 'none';
+          companyLogoEl.style.cursor = 'default';
         }
       }
     }
@@ -64,6 +136,10 @@ function loadBrandColors() {
 // Load responses from storage
 function loadResponses() {
   chrome.storage.sync.get(['quickResponses', 'adminPassword'], (result) => {
+    // Handle Firefox case where result might be undefined
+    if (!result) {
+      result = {};
+    }
     allResponses = result.quickResponses || [];
     displayResponses(allResponses);
     
@@ -194,10 +270,14 @@ function initializeSearch() {
 function initializeAdminButton() {
   document.getElementById('adminBtn').addEventListener('click', () => {
     chrome.runtime.openOptionsPage();
-    // Focus on admin section if possible
+    // Focus on admin section if possible (may fail silently in Firefox if no content script)
     setTimeout(() => {
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        chrome.tabs.sendMessage(tabs[0].id, { action: 'focusAdminSection' });
+        if (tabs[0]) {
+          chrome.tabs.sendMessage(tabs[0].id, { action: 'focusAdminSection' }).catch(() => {
+            // Silently fail if message can't be sent (e.g., options page doesn't have content script)
+          });
+        }
       });
     }, 500);
   });

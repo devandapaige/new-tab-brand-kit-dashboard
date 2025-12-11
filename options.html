@@ -10,15 +10,37 @@
 <body>
   <div class="settings-container">
     <header class="settings-header">
-      <h1>Brand Kit Dashboard Settings</h1>
+      <h1>⚙️ Brand Kit Dashboard Settings</h1>
       <p>Customize your dashboard to match your brand colors and preferences</p>
     </header>
+
+    <!-- Navigation Menu -->
+    <nav class="settings-nav" id="settingsNav">
+      <div class="nav-content">
+        <h3>Quick Navigation</h3>
+        <ul class="nav-list">
+          <li><a href="#brand-colors" class="nav-link">Brand Colors</a></li>
+          <li><a href="#background" class="nav-link">Background</a></li>
+          <li><a href="#card-appearance" class="nav-link">Card Appearance</a></li>
+          <li><a href="#general-settings" class="nav-link">General</a></li>
+          <li><a href="#business-info" class="nav-link">Business Info</a></li>
+          <li><a href="#custom-header" class="nav-link">Custom Header</a></li>
+          <li><a href="#card-visibility" class="nav-link">Card Visibility</a></li>
+          <li><a href="#todoist" class="nav-link">Todoist</a></li>
+          <li><a href="#trackersSection" class="nav-link">Trackers</a></li>
+          <li><a href="#linksSection" class="nav-link">Quick Links</a></li>
+          <li><a href="#notesSection" class="nav-link">Notes</a></li>
+          <li><a href="#quickResponsesSection" class="nav-link">Quick Responses</a></li>
+          <li><a href="#export-import" class="nav-link">Export/Import</a></li>
+        </ul>
+      </div>
+    </nav>
 
     <div class="settings-content">
       <!-- Admin Lock Section -->
       <section class="settings-section admin-lock-section">
         <div class="admin-lock-header">
-          <h2>🔒 Admin Access</h2>
+          <h2>Admin Access</h2>
           <div class="admin-status" id="adminStatus">
             <span id="adminStatusText">Settings are locked</span>
             <button id="lockUnlockBtn" class="lock-unlock-btn">Unlock Settings</button>
@@ -53,16 +75,20 @@
       </section>
 
       <!-- Brand Colors Section -->
-      <section class="settings-section locked">
+      <section class="settings-section locked" id="brand-colors">
         <h2>Brand Colors</h2>
-        <p class="section-description">Set your brand colors to customize the dashboard appearance</p>
-        
-        <div class="color-group">
+        <div class="section-content">
+          <p class="section-description">Set your brand colors to customize the dashboard appearance</p>
+          
+          <div class="color-group">
           <div class="color-input-wrapper">
             <label for="primaryColor">Primary Color</label>
             <div class="color-picker-wrapper">
               <input type="color" id="primaryColor" value="#4A90E2">
               <input type="text" id="primaryColorText" value="#4A90E2" class="color-text-input">
+            </div>
+            <div class="color-preview-box">
+              <div class="preview-color" id="primaryColorPreview" style="background-color: #4A90E2;"></div>
             </div>
           </div>
           
@@ -72,6 +98,9 @@
               <input type="color" id="secondaryColor" value="#50C878">
               <input type="text" id="secondaryColorText" value="#50C878" class="color-text-input">
             </div>
+            <div class="color-preview-box">
+              <div class="preview-color" id="secondaryColorPreview" style="background-color: #50C878;"></div>
+            </div>
           </div>
           
           <div class="color-input-wrapper">
@@ -80,12 +109,16 @@
               <input type="color" id="accentColor" value="#FF6B6B">
               <input type="text" id="accentColorText" value="#FF6B6B" class="color-text-input">
             </div>
+            <div class="color-preview-box">
+              <div class="preview-color" id="accentColorPreview" style="background-color: #FF6B6B;"></div>
+            </div>
           </div>
+        </div>
         </div>
       </section>
 
       <!-- Background Section -->
-      <section class="settings-section locked">
+      <section class="settings-section locked" id="background">
         <h2>Background</h2>
         <p class="section-description">Customize the background image and overlay</p>
         
@@ -136,7 +169,7 @@
       </section>
 
       <!-- Card Appearance Section -->
-      <section class="settings-section locked">
+      <section class="settings-section locked" id="card-appearance">
         <h2>Card Appearance</h2>
         <p class="section-description">Customize card colors and text</p>
         
@@ -145,6 +178,9 @@
           <div class="color-picker-wrapper">
             <input type="color" id="cardBackground" value="#FFFFFF">
             <input type="text" id="cardBackgroundText" value="rgba(255, 255, 255, 0.95)" class="color-text-input">
+          </div>
+          <div class="color-preview-box">
+            <div class="preview-color" id="cardBackgroundPreview" style="background-color: rgba(255, 255, 255, 0.95);"></div>
           </div>
           
           <label for="cardBackgroundOpacity" style="display: block; margin-top: 1rem; margin-bottom: 0.5rem; font-size: 0.875rem; color: #64748b;">
@@ -213,7 +249,7 @@
       </section>
 
       <!-- General Settings -->
-      <section class="settings-section locked">
+      <section class="settings-section locked" id="general-settings">
         <h2>General Settings</h2>
         
         <div class="input-group">
@@ -234,12 +270,18 @@
           </div>
           <input type="text" id="companyLogo" style="display: none;">
         </div>
+        
+        <div class="input-group">
+          <label for="companyLogoUrl">Logo Link URL (Optional)</label>
+          <input type="url" id="companyLogoUrl" placeholder="https://example.com">
+          <small>Set a URL to make the logo clickable. Users can click the logo to navigate to this website.</small>
+        </div>
       </section>
 
       <!-- Business Information -->
-      <section class="settings-section locked">
+      <section class="settings-section locked" id="business-info">
         <h2>Business Information</h2>
-        <p class="section-description">Add up to 4 lines of business information (address, phone, etc.). You can use {{userName}} to insert the team/user name.</p>
+        <p class="section-description">Add up to 4 lines of business information (address, phone, etc.). You can use <code>{{userName}}</code> to insert the team/user name.</p>
         
         <div class="input-group">
           <label for="businessInfoLine1">Line 1</label>
@@ -263,67 +305,44 @@
       </section>
 
       <!-- Custom Header -->
-      <section class="settings-section locked">
+      <section class="settings-section locked" id="custom-header">
         <h2>Custom Header</h2>
-        <p class="section-description">Customize the header text. Use placeholders: {{greeting}}, {{date}}, {{userName}} (case-insensitive)</p>
+        <p class="section-description">Customize the header text. Use placeholders: <code>{{greeting}}</code>, <code>{{date}}</code>, <code>{{userName}}</code> (case-insensitive)</p>
         
         <div class="input-group">
           <label for="customHeaderTitle">Header Title</label>
           <input type="text" id="customHeaderTitle" placeholder="e.g., Welcome, {{greeting}}!">
-          <small>Use {{greeting}} (or {{Greeting}}) to insert the time-based greeting. Use {{userName}} to insert the team/user name.</small>
+          <small>Use <code>{{greeting}}</code> (or <code>{{Greeting}}</code>) to insert the time-based greeting. Use <code>{{userName}}</code> to insert the team/user name.</small>
         </div>
         
         <div class="input-group">
           <label for="customHeaderText">Header Text</label>
           <input type="text" id="customHeaderText" placeholder="e.g., Today is {{date}}">
-          <small>Use {{date}} (or {{Date}}) to insert the current date and time. Use {{userName}} to insert the team/user name.</small>
+          <small>Use <code>{{date}}</code> (or <code>{{Date}}</code>) to insert the current date and time. Use <code>{{userName}}</code> to insert the team/user name.</small>
         </div>
       </section>
 
-      <!-- Dashboard Visibility -->
-      <section class="settings-section locked">
-        <h2>Dashboard Visibility</h2>
-        <p class="section-description">Control which cards are visible on the dashboard for all users</p>
+      <!-- Card Visibility -->
+      <section class="settings-section locked" id="card-visibility">
+        <h2>Card Visibility & Order</h2>
+        <p class="section-description">Arrange card order and control which cards are visible on the dashboard. Drag cards to reorder them left to right.</p>
         
         <div class="input-group">
-          <label class="toggle-label" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
-            <span>Trackers Card</span>
-            <input type="checkbox" id="cardVisibilityTrackers" checked>
-            <span class="toggle-switch"></span>
-          </label>
-          <small style="display: block; margin-bottom: 1rem; color: #64748b;">Show or hide the Trackers card on the dashboard</small>
+          <label style="display: block; margin-bottom: 0.75rem; font-weight: 600; color: var(--text-primary);">Card Order & Visibility</label>
+          <div id="cardOrderList" class="card-order-list"></div>
+          <small style="display: block; margin-top: 0.75rem; color: #64748b;">Drag cards to reorder. Cards appear left to right on the dashboard in the order shown above.</small>
         </div>
         
-        <div class="input-group">
-          <label class="toggle-label" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
-            <span>Notes Card</span>
-            <input type="checkbox" id="cardVisibilityNotes" checked>
-            <span class="toggle-switch"></span>
-          </label>
-          <small style="display: block; margin-bottom: 1rem; color: #64748b;">Show or hide the Notes card on the dashboard</small>
+        <div class="input-group" style="margin-top: 1.5rem;">
+          <button id="addTextCardBtn" class="btn-secondary" style="width: 100%;">+ Add Blank Text Card</button>
+          <small style="display: block; margin-top: 0.5rem; color: #64748b;">Add a custom text card to display information on the dashboard</small>
         </div>
         
-        <div class="input-group">
-          <label class="toggle-label" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
-            <span>Quick Links Card</span>
-            <input type="checkbox" id="cardVisibilityLinks" checked>
-            <span class="toggle-switch"></span>
-          </label>
-          <small style="display: block; margin-bottom: 1rem; color: #64748b;">Show or hide the Quick Links card on the dashboard</small>
-        </div>
-        
-        <div class="input-group">
-          <label class="toggle-label" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
-            <span>Todoist Card</span>
-            <input type="checkbox" id="cardVisibilityTodoist" checked>
-            <span class="toggle-switch"></span>
-          </label>
-          <small style="display: block; margin-bottom: 1rem; color: #64748b;">Show or hide the Todoist Today card on the dashboard</small>
-        </div>
+        <div id="textCardsList" class="text-cards-list" style="margin-top: 1.5rem;"></div>
       </section>
 
       <!-- Todoist Settings -->
-      <section class="settings-section locked">
+      <section class="settings-section locked" id="todoist">
         <h2>Todoist Integration</h2>
         <p class="section-description">Connect your Todoist account to display today's tasks on your dashboard</p>
         
@@ -419,7 +438,7 @@
       </section>
 
       <!-- Export/Import Section -->
-      <section class="settings-section locked">
+      <section class="settings-section locked" id="export-import">
         <h2>Export & Import Settings</h2>
         <p class="section-description">Backup your settings or share them with your team</p>
         
@@ -444,6 +463,11 @@
       <div id="statusMessage" class="status-message"></div>
     </div>
   </div>
+
+  <!-- Scroll to Top Button -->
+  <button id="scrollToTop" class="scroll-to-top" aria-label="Scroll to top" style="display: none;">
+    ↑
+  </button>
 
   <script src="scripts/options.js"></script>
 </body>

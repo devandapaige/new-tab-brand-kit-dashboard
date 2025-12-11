@@ -2,33 +2,25 @@
 
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', () => {
-  loadBrandSettings();
-  initializeDateTime();
-  initializeGreeting();
-  checkAdminStatus();
-  loadCardVisibility();
-  loadTrackers();
-  loadLinks();
-  loadNotes();
-  initializeTodoist();
-  initializeModals();
-  initializeSettings();
-  initializeKeyboardShortcuts();
-  
-  // Listen for admin status changes
+  // Set up storage change listener FIRST, before loading settings
+  // This ensures we catch any changes that happen during initialization
   chrome.storage.onChanged.addListener((changes, areaName) => {
+    
+    // Listen for admin status changes
     if (areaName === 'sync' && (changes.adminUnlocked || changes.adminPassword)) {
       checkAdminStatus();
       // Reload items to update delete buttons
       loadLinks();
       loadNotes();
     }
-    // Listen for card visibility changes
+    // Listen for card visibility, order, and text card changes
     if (areaName === 'sync' && (
       changes.cardVisibilityTrackers ||
       changes.cardVisibilityNotes ||
       changes.cardVisibilityLinks ||
-      changes.cardVisibilityTodoist
+      changes.cardVisibilityTodoist ||
+      changes.cardOrder ||
+      changes.textCards
     )) {
       loadCardVisibility();
     }
@@ -51,9 +43,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     // Listen for overlay and background color changes
     if (areaName === 'sync' && (
+      changes.primaryColor ||
+      changes.secondaryColor ||
+      changes.accentColor ||
       changes.overlayEnabled ||
       changes.overlayOpacity ||
       changes.backgroundColor ||
+      changes.cardBackground ||
+      changes.textPrimary ||
+      changes.textSecondary ||
       changes.textLight ||
       changes.borderColor ||
       changes.shadowIntensity ||
@@ -66,65 +64,226 @@ document.addEventListener('DOMContentLoaded', () => {
       changes.businessInfoLine4 ||
       changes.userName
     )) {
+      console.log('🔄 Storage change detected - reloading brand settings...', {
+        changedKeys: Object.keys(changes).filter(k => 
+          changes[k] && (changes[k].newValue !== undefined || changes[k].oldValue !== undefined)
+        ),
+        cardBackgroundChanged: !!changes.cardBackground,
+        cardBackgroundNew: changes.cardBackground?.newValue,
+        cardBackgroundOld: changes.cardBackground?.oldValue
+      });
       loadBrandSettings();
     }
     
     // Listen for company logo changes (from local storage)
     if (areaName === 'local' && changes.companyLogo) {
       const companyLogoEl = document.getElementById('companyLogo');
-      if (companyLogoEl) {
+      const companyLogoLink = document.getElementById('companyLogoLink');
+      if (companyLogoEl && companyLogoLink) {
         if (changes.companyLogo.newValue) {
           companyLogoEl.src = changes.companyLogo.newValue;
-          companyLogoEl.style.display = 'block';
+          companyLogoLink.style.display = 'block';
+          // Reload logo URL
+          chrome.storage.sync.get(['companyLogoUrl'], (result) => {
+            if (result && result.companyLogoUrl && result.companyLogoUrl.trim()) {
+              companyLogoLink.href = result.companyLogoUrl.trim();
+              companyLogoLink.style.cursor = 'pointer';
+              companyLogoEl.style.cursor = 'pointer';
+            } else {
+              companyLogoLink.href = '#';
+              companyLogoLink.style.pointerEvents = 'none';
+              companyLogoEl.style.cursor = 'default';
+            }
+          });
         } else {
-          companyLogoEl.style.display = 'none';
+          companyLogoLink.style.display = 'none';
+        }
+      }
+    }
+    
+    // Listen for logo URL changes
+    if (areaName === 'sync' && changes.companyLogoUrl) {
+      const companyLogoLink = document.getElementById('companyLogoLink');
+      const companyLogoEl = document.getElementById('companyLogo');
+      if (companyLogoLink && companyLogoEl && companyLogoLink.style.display !== 'none') {
+        if (changes.companyLogoUrl.newValue && changes.companyLogoUrl.newValue.trim()) {
+          companyLogoLink.href = changes.companyLogoUrl.newValue.trim();
+          companyLogoLink.style.cursor = 'pointer';
+          companyLogoEl.style.cursor = 'pointer';
+          companyLogoLink.style.pointerEvents = 'auto';
+        } else {
+          companyLogoLink.href = '#';
+          companyLogoLink.style.pointerEvents = 'none';
+          companyLogoEl.style.cursor = 'default';
         }
       }
     }
   });
+  
+  // Now load initial settings AFTER listener is set up
+  loadBrandSettings();
+  initializeDateTime();
+  initializeGreeting();
+  checkAdminStatus();
+  loadCardVisibility();
+  loadTrackers();
+  loadLinks();
+  loadNotes();
+  initializeTodoist();
+  initializeModals();
+  initializeSettings();
+  initializeKeyboardShortcuts();
+  initializeLogoClick();
 });
 
-// Load and apply card visibility settings
+// Initialize logo click handler
+function initializeLogoClick() {
+  const companyLogoLink = document.getElementById('companyLogoLink');
+  if (companyLogoLink) {
+    companyLogoLink.addEventListener('click', (e) => {
+      // Only prevent default if there's no valid URL
+      if (!companyLogoLink.href || companyLogoLink.href === '#' || companyLogoLink.style.pointerEvents === 'none') {
+        e.preventDefault();
+      }
+    });
+  }
+}
+
+// Load and apply card visibility and order settings
 function loadCardVisibility() {
   chrome.storage.sync.get([
+    'cardOrder',
     'cardVisibilityTrackers',
     'cardVisibilityNotes',
     'cardVisibilityLinks',
-    'cardVisibilityTodoist'
+    'cardVisibilityTodoist',
+    'textCards'
   ], (result) => {
-    // Trackers card
+    // Handle Firefox case where result might be undefined
+    if (!result) {
+      result = {};
+    }
+    
+    // Get card order or use default
+    const defaultOrder = ['trackers', 'notes', 'links', 'todoist'];
+    const cardOrder = result.cardOrder || defaultOrder;
+    const textCards = result.textCards || [];
+    
+    // Get dashboard grid container
+    const dashboardGrid = document.querySelector('.dashboard-grid');
+    if (!dashboardGrid) return;
+    
+    const columns = {
+      left: dashboardGrid.querySelector('.column-left'),
+      center: dashboardGrid.querySelector('.column-center'),
+      right: dashboardGrid.querySelector('.column-right')
+    };
+    
+    // Collect all existing cards
+    const existingCards = {};
+    
+    // System cards - get from DOM
     const trackersCard = document.getElementById('trackersCard');
     if (trackersCard) {
-      const isVisible = result.cardVisibilityTrackers !== false; // Default to true if not set
+      const isVisible = result.cardVisibilityTrackers !== false;
       trackersCard.style.display = isVisible ? 'block' : 'none';
+      existingCards.trackers = trackersCard;
     }
     
-    // Notes card
     const notesCard = document.querySelector('.notes-card');
     if (notesCard) {
-      const isVisible = result.cardVisibilityNotes !== false; // Default to true if not set
+      const isVisible = result.cardVisibilityNotes !== false;
       notesCard.style.display = isVisible ? 'block' : 'none';
+      existingCards.notes = notesCard;
     }
     
-    // Links card
     const linksCard = document.querySelector('.links-card');
     if (linksCard) {
-      const isVisible = result.cardVisibilityLinks !== false; // Default to true if not set
+      const isVisible = result.cardVisibilityLinks !== false;
       linksCard.style.display = isVisible ? 'block' : 'none';
+      existingCards.links = linksCard;
     }
     
-    // Todoist card
     const todoistCard = document.querySelector('.todoist-card');
     if (todoistCard) {
-      const isVisible = result.cardVisibilityTodoist !== false; // Default to true if not set
+      const isVisible = result.cardVisibilityTodoist !== false;
       todoistCard.style.display = isVisible ? 'block' : 'none';
+      existingCards.todoist = todoistCard;
+    }
+    
+    // Remove existing text cards
+    const existingTextCards = dashboardGrid.querySelectorAll('.text-card');
+    existingTextCards.forEach(card => card.remove());
+    
+    // Create and add text cards
+    textCards.forEach(textCard => {
+      if (textCard.visible !== false) {
+        const textCardEl = createTextCardElement(textCard);
+        existingCards[`text-${textCard.id}`] = textCardEl;
+      }
+    });
+    
+    // Clear all columns
+    Object.values(columns).forEach(col => {
+      if (col) {
+        col.innerHTML = '';
+      }
+    });
+    
+    // Render cards in order, distributing across columns left to right
+    const columnKeys = ['left', 'center', 'right'];
+    let currentColumnIndex = 0;
+    
+    cardOrder.forEach(cardId => {
+      const card = existingCards[cardId];
+      if (!card) return;
+      
+      const columnKey = columnKeys[currentColumnIndex % 3];
+      const column = columns[columnKey];
+      
+      if (column && card.style.display !== 'none') {
+        column.appendChild(card);
+        currentColumnIndex++;
+      }
+    });
+    
+    // Restart tracker updates after cards are rendered
+    if (typeof startTrackerUpdates === 'function') {
+      startTrackerUpdates();
     }
   });
+}
+
+function createTextCardElement(textCard) {
+  const card = document.createElement('section');
+  card.className = 'card text-card';
+  card.dataset.textCardId = textCard.id;
+  
+  card.innerHTML = `
+    <div class="card-header">
+      <h2 class="card-title">${escapeHtml(textCard.title || 'Text Card')}</h2>
+    </div>
+    <div class="text-card-content">
+      ${textCard.content || ''}
+    </div>
+  `;
+  
+  return card;
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }
 
 // Check admin status and update UI accordingly
 function checkAdminStatus() {
   chrome.storage.sync.get(['adminPassword', 'adminUnlocked'], (result) => {
+    // Handle Firefox case where result might be undefined
+    if (!result) {
+      result = {};
+    }
     const hasPassword = !!result.adminPassword;
     // Only show buttons if admin is explicitly unlocked (or no password is set)
     // If password exists but not unlocked, hide buttons
@@ -138,94 +297,171 @@ function checkAdminStatus() {
 }
 
 // Load brand color settings from storage
-async function loadBrandSettings() {
-  try {
-    const result = await chrome.storage.sync.get([
-      'primaryColor',
-      'secondaryColor',
-      'accentColor',
-      'backgroundColor',
-      'cardBackground',
-      'textPrimary',
-      'textSecondary',
-      'textLight',
-      'borderColor',
-      'shadowIntensity',
-      'borderRadius',
-      'userName',
-      'overlayEnabled',
-      'overlayOpacity',
-      'customHeaderTitle',
-      'customHeaderText',
-      'businessInfoLine1',
-      'businessInfoLine2',
-      'businessInfoLine3',
-      'businessInfoLine4'
-    ]);
+function loadBrandSettings() {
+  // Use callback-based API for Firefox compatibility (async/await doesn't work reliably in Firefox)
+  chrome.storage.sync.get([
+    'primaryColor',
+    'secondaryColor',
+    'accentColor',
+    'backgroundColor',
+    'cardBackground',
+    'textPrimary',
+    'textSecondary',
+    'textLight',
+    'borderColor',
+    'shadowIntensity',
+    'borderRadius',
+    'userName',
+    'overlayEnabled',
+    'overlayOpacity',
+    'customHeaderTitle',
+    'customHeaderText',
+    'businessInfoLine1',
+    'businessInfoLine2',
+    'businessInfoLine3',
+    'businessInfoLine4',
+    'companyLogoUrl'
+  ], (result) => {
+    // Handle Firefox case where result might be undefined
+    if (!result) {
+      result = {};
+    }
     
-    // Load background image and company logo from local storage (they're stored there because they can be large)
-    const localResult = await chrome.storage.local.get(['backgroundImage', 'companyLogo']);
-    const backgroundImage = localResult.backgroundImage || result.backgroundImage; // Fallback to sync for backwards compatibility
+    const safeResult = result;
+    
+    // If no settings found, try to load defaults from background script
+    if (Object.keys(safeResult).length === 0 || (!safeResult.primaryColor && !safeResult.cardBackground)) {
+      // Try to get defaults - they should have been set by background.js
+      chrome.storage.sync.get([
+        'primaryColor', 'secondaryColor', 'accentColor', 'backgroundColor', 
+        'cardBackground', 'textPrimary', 'textSecondary'
+      ], (defaultResult) => {
+        if (!defaultResult) {
+          defaultResult = {};
+        }
+        
+        if (defaultResult && Object.keys(defaultResult).length > 0) {
+          Object.assign(safeResult, defaultResult);
+          applyBrandSettings(safeResult);
+        } else {
+          // Hardcoded fallback defaults
+          safeResult.primaryColor = safeResult.primaryColor || '#4A90E2';
+          safeResult.secondaryColor = safeResult.secondaryColor || '#50C878';
+          safeResult.accentColor = safeResult.accentColor || '#FF6B6B';
+          safeResult.backgroundColor = safeResult.backgroundColor || 'rgba(15, 23, 42, 0.85)';
+          safeResult.cardBackground = safeResult.cardBackground || 'rgba(255, 255, 255, 0.95)';
+          safeResult.textPrimary = safeResult.textPrimary || '#1E293B';
+          safeResult.textSecondary = safeResult.textSecondary || '#64748B';
+          safeResult.textLight = safeResult.textLight || '#FFFFFF';
+          safeResult.borderColor = safeResult.borderColor || 'rgba(226, 232, 240, 0.5)';
+          safeResult.shadowIntensity = safeResult.shadowIntensity !== undefined ? safeResult.shadowIntensity : 15;
+          safeResult.borderRadius = safeResult.borderRadius !== undefined ? safeResult.borderRadius : 8;
+          safeResult.userName = safeResult.userName || 'Team';
+          applyBrandSettings(safeResult);
+        }
+      });
+    } else {
+      // Settings found, now load local storage items (background image, logo)
+      loadLocalStorageAndApply(safeResult);
+    }
+  });
+}
+
+// Helper function to load local storage and apply all settings
+function loadLocalStorageAndApply(safeResult) {
+  chrome.storage.local.get(['backgroundImage', 'companyLogo'], (localResult) => {
+    // Handle Firefox case where localResult might be undefined
+    if (!localResult) {
+      localResult = {};
+    }
+    const backgroundImage = localResult.backgroundImage || safeResult.backgroundImage; // Fallback to sync for backwards compatibility
     const companyLogo = localResult.companyLogo;
+    
+    // Add to safeResult for application
+    safeResult.backgroundImage = backgroundImage;
+    safeResult.companyLogo = companyLogo;
+    
+    // Load logo URL from sync storage
+    chrome.storage.sync.get(['companyLogoUrl'], (syncResult) => {
+      if (!syncResult) {
+        syncResult = {};
+      }
+      safeResult.companyLogoUrl = syncResult.companyLogoUrl;
+      applyBrandSettings(safeResult);
+    });
+  });
+}
+
+// Helper function to apply all brand settings to the DOM
+function applyBrandSettings(safeResult) {
 
     const root = document.documentElement;
     
-    if (result.primaryColor) {
-      root.style.setProperty('--primary-color', result.primaryColor);
-      const rgb = hexToRgb(result.primaryColor);
+    // Apply primary color (always apply if it exists, even if empty string)
+    if (safeResult.primaryColor !== undefined && safeResult.primaryColor !== null && safeResult.primaryColor !== '') {
+      root.style.setProperty('--primary-color', safeResult.primaryColor);
+      const rgb = hexToRgb(safeResult.primaryColor);
       if (rgb) {
         root.style.setProperty('--primary-color-rgb', `${rgb.r}, ${rgb.g}, ${rgb.b}`);
       }
     }
     
-    if (result.secondaryColor) {
-      root.style.setProperty('--secondary-color', result.secondaryColor);
-      const rgb = hexToRgb(result.secondaryColor);
+    // Apply secondary color
+    if (safeResult.secondaryColor !== undefined && safeResult.secondaryColor !== null && safeResult.secondaryColor !== '') {
+      root.style.setProperty('--secondary-color', safeResult.secondaryColor);
+      const rgb = hexToRgb(safeResult.secondaryColor);
       if (rgb) {
         root.style.setProperty('--secondary-color-rgb', `${rgb.r}, ${rgb.g}, ${rgb.b}`);
       }
     }
     
-    if (result.accentColor) {
-      root.style.setProperty('--accent-color', result.accentColor);
-      const rgb = hexToRgb(result.accentColor);
+    // Apply accent color
+    if (safeResult.accentColor !== undefined && safeResult.accentColor !== null && safeResult.accentColor !== '') {
+      root.style.setProperty('--accent-color', safeResult.accentColor);
+      const rgb = hexToRgb(safeResult.accentColor);
       if (rgb) {
         root.style.setProperty('--accent-color-rgb', `${rgb.r}, ${rgb.g}, ${rgb.b}`);
       }
     }
     
-    if (result.backgroundColor) {
-      root.style.setProperty('--background-color', result.backgroundColor);
+    // Apply background color
+    if (safeResult.backgroundColor !== undefined && safeResult.backgroundColor !== null && safeResult.backgroundColor !== '') {
+      root.style.setProperty('--background-color', safeResult.backgroundColor);
     }
     
-    if (result.cardBackground) {
-      root.style.setProperty('--card-background', result.cardBackground);
+    // Apply card background
+    if (safeResult.cardBackground !== undefined && safeResult.cardBackground !== null && safeResult.cardBackground !== '') {
+      root.style.setProperty('--card-background', safeResult.cardBackground);
     }
     
-    if (result.textPrimary) {
-      root.style.setProperty('--text-primary', result.textPrimary);
+    // Apply text primary
+    if (safeResult.textPrimary !== undefined && safeResult.textPrimary !== null && safeResult.textPrimary !== '') {
+      root.style.setProperty('--text-primary', safeResult.textPrimary);
     }
     
-    if (result.textSecondary) {
-      root.style.setProperty('--text-secondary', result.textSecondary);
+    // Apply text secondary
+    if (safeResult.textSecondary !== undefined && safeResult.textSecondary !== null && safeResult.textSecondary !== '') {
+      root.style.setProperty('--text-secondary', safeResult.textSecondary);
     }
     
-    if (result.textLight) {
-      root.style.setProperty('--text-light', result.textLight);
+    // Apply text light
+    if (safeResult.textLight !== undefined && safeResult.textLight !== null && safeResult.textLight !== '') {
+      root.style.setProperty('--text-light', safeResult.textLight);
     }
     
-    if (result.borderColor) {
-      root.style.setProperty('--border-color', result.borderColor);
+    // Apply border color
+    if (safeResult.borderColor !== undefined && safeResult.borderColor !== null && safeResult.borderColor !== '') {
+      root.style.setProperty('--border-color', safeResult.borderColor);
     }
     
     // Update shadow values based on intensity
-    const shadowIntensity = result.shadowIntensity !== undefined ? result.shadowIntensity : 15;
+    const shadowIntensity = safeResult.shadowIntensity !== undefined ? safeResult.shadowIntensity : 15;
     const shadowOpacity = shadowIntensity / 100;
     root.style.setProperty('--shadow', `0 4px 6px rgba(0, 0, 0, ${0.1 * shadowOpacity})`);
     root.style.setProperty('--shadow-lg', `0 10px 25px rgba(0, 0, 0, ${0.15 * shadowOpacity})`);
     
     // Update border radius values
-    const borderRadius = result.borderRadius !== undefined ? result.borderRadius : 8;
+    const borderRadius = safeResult.borderRadius !== undefined ? safeResult.borderRadius : 8;
     root.style.setProperty('--border-radius', `${borderRadius}px`);
     root.style.setProperty('--border-radius-sm', `${Math.round(borderRadius * 0.75)}px`);
     root.style.setProperty('--border-radius-lg', `${Math.round(borderRadius * 1.5)}px`);
@@ -233,6 +469,7 @@ async function loadBrandSettings() {
     const backgroundImageEl = document.getElementById('backgroundImage');
     
     if (backgroundImageEl) {
+      const backgroundImage = safeResult.backgroundImage;
       if (backgroundImage && backgroundImage.trim()) {
         // Handle both data URLs and regular URLs
         const imageUrl = backgroundImage.trim();
@@ -245,33 +482,48 @@ async function loadBrandSettings() {
       }
     }
     
-    if (result.userName) {
-      document.getElementById('userName').textContent = result.userName;
+    if (safeResult.userName) {
+      document.getElementById('userName').textContent = safeResult.userName;
     }
     
     // Load and display company logo
     const companyLogoEl = document.getElementById('companyLogo');
+    const companyLogoLink = document.getElementById('companyLogoLink');
+    const companyLogo = safeResult.companyLogo;
+    const companyLogoUrl = safeResult.companyLogoUrl;
+    
     if (companyLogoEl && companyLogo) {
       companyLogoEl.src = companyLogo;
-      companyLogoEl.style.display = 'block';
-    } else if (companyLogoEl) {
-      companyLogoEl.style.display = 'none';
+      if (companyLogoLink) {
+        companyLogoLink.style.display = 'block';
+        if (companyLogoUrl && companyLogoUrl.trim()) {
+          companyLogoLink.href = companyLogoUrl.trim();
+          companyLogoLink.style.cursor = 'pointer';
+          companyLogoEl.style.cursor = 'pointer';
+        } else {
+          companyLogoLink.href = '#';
+          companyLogoLink.style.pointerEvents = 'none';
+          companyLogoEl.style.cursor = 'default';
+        }
+      }
+    } else if (companyLogoLink) {
+      companyLogoLink.style.display = 'none';
     }
     
     // Load and display business info (with placeholder support)
     const businessInfoEl = document.getElementById('businessInfo');
     const businessInfoLines = [
-      result.businessInfoLine1,
-      result.businessInfoLine2,
-      result.businessInfoLine3,
-      result.businessInfoLine4
+      safeResult.businessInfoLine1,
+      safeResult.businessInfoLine2,
+      safeResult.businessInfoLine3,
+      safeResult.businessInfoLine4
     ].filter(line => line && line.trim());
     
     if (businessInfoEl && businessInfoLines.length > 0) {
-      document.getElementById('businessInfoLine1').innerHTML = replacePlaceholders(result.businessInfoLine1 || '', result.userName);
-      document.getElementById('businessInfoLine2').innerHTML = replacePlaceholders(result.businessInfoLine2 || '', result.userName);
-      document.getElementById('businessInfoLine3').innerHTML = replacePlaceholders(result.businessInfoLine3 || '', result.userName);
-      document.getElementById('businessInfoLine4').innerHTML = replacePlaceholders(result.businessInfoLine4 || '', result.userName);
+      document.getElementById('businessInfoLine1').innerHTML = replacePlaceholders(safeResult.businessInfoLine1 || '', safeResult.userName);
+      document.getElementById('businessInfoLine2').innerHTML = replacePlaceholders(safeResult.businessInfoLine2 || '', safeResult.userName);
+      document.getElementById('businessInfoLine3').innerHTML = replacePlaceholders(safeResult.businessInfoLine3 || '', safeResult.userName);
+      document.getElementById('businessInfoLine4').innerHTML = replacePlaceholders(safeResult.businessInfoLine4 || '', safeResult.userName);
       businessInfoEl.style.display = 'block';
     } else if (businessInfoEl) {
       businessInfoEl.style.display = 'none';
@@ -281,19 +533,19 @@ async function loadBrandSettings() {
     const greetingEl = document.getElementById('greeting');
     const dateTimeEl = document.getElementById('dateTime');
     
-    if (result.customHeaderTitle || result.customHeaderText) {
+    if (safeResult.customHeaderTitle || safeResult.customHeaderText) {
       // Use custom header
-      if (result.customHeaderTitle) {
-        greetingEl.innerHTML = replacePlaceholders(result.customHeaderTitle, result.userName);
+      if (safeResult.customHeaderTitle) {
+        greetingEl.innerHTML = replacePlaceholders(safeResult.customHeaderTitle, safeResult.userName);
       }
-      if (result.customHeaderText) {
-        dateTimeEl.innerHTML = replacePlaceholders(result.customHeaderText, result.userName);
+      if (safeResult.customHeaderText) {
+        dateTimeEl.innerHTML = replacePlaceholders(safeResult.customHeaderText, safeResult.userName);
       }
     } else {
       // Use default header
       if (greetingEl) {
         const greetingText = getGreeting();
-        greetingEl.innerHTML = `<span id="greetingText">${greetingText}</span>, <span id="userName">${result.userName || 'Team'}</span>.`;
+        greetingEl.innerHTML = `<span id="greetingText">${greetingText}</span>, <span id="userName">${safeResult.userName || 'Team'}</span>.`;
       }
       // Date/time will be updated by initializeDateTime
     }
@@ -301,19 +553,16 @@ async function loadBrandSettings() {
     // Apply overlay settings
     const overlayEl = document.querySelector('.overlay');
     if (overlayEl) {
-      const overlayEnabled = result.overlayEnabled !== false; // Default to true
+      const overlayEnabled = safeResult.overlayEnabled !== false; // Default to true
       
-      if (overlayEnabled && result.backgroundColor) {
+      if (overlayEnabled && safeResult.backgroundColor) {
         overlayEl.style.display = 'block';
         // Use the backgroundColor value directly (it already has the correct opacity from options.js)
-        overlayEl.style.backgroundColor = result.backgroundColor;
+        overlayEl.style.backgroundColor = safeResult.backgroundColor;
       } else {
         overlayEl.style.display = 'none';
       }
     }
-  } catch (error) {
-    console.error('Error loading brand settings:', error);
-  }
 }
 
 // Convert hex to RGB
@@ -332,6 +581,10 @@ function initializeDateTime() {
   
   function updateDateTime() {
     chrome.storage.sync.get(['customHeaderText', 'userName'], (result) => {
+      // Handle Firefox case where result might be undefined
+      if (!result) {
+        result = {};
+      }
       if (result.customHeaderText) {
         // Use custom header text with placeholders
         dateTimeEl.innerHTML = replacePlaceholders(result.customHeaderText, result.userName);
@@ -357,6 +610,10 @@ function initializeDateTime() {
   // Also update custom header greeting if it contains {{greeting}} (case-insensitive)
   setInterval(() => {
     chrome.storage.sync.get(['customHeaderTitle', 'userName', 'businessInfoLine1', 'businessInfoLine2', 'businessInfoLine3', 'businessInfoLine4'], (result) => {
+      // Handle Firefox case where result might be undefined
+      if (!result) {
+        result = {};
+      }
       // Update header if it contains greeting placeholder
       if (result.customHeaderTitle && /\{\{greeting\}\}/i.test(result.customHeaderTitle)) {
         const greetingEl = document.getElementById('greeting');
@@ -393,6 +650,10 @@ function getGreeting() {
 // Initialize greeting (for default header)
 function initializeGreeting() {
   chrome.storage.sync.get(['customHeaderTitle', 'userName'], (result) => {
+    // Handle Firefox case where result might be undefined
+    if (!result) {
+      result = {};
+    }
     // Only update if not using custom header
     if (!result.customHeaderTitle) {
       const greetingEl = document.getElementById('greetingText');
@@ -430,6 +691,10 @@ function replacePlaceholders(text, userName) {
 // Trackers
 function loadTrackers() {
   chrome.storage.sync.get(['countdowns'], (result) => {
+    // Handle Firefox case where result might be undefined
+    if (!result) {
+      result = {};
+    }
     const countdowns = result.countdowns || [];
     const pinnedTrackers = countdowns.filter(c => c.pinnedToDashboard !== false);
     
@@ -566,10 +831,50 @@ function formatTimeString(time, isCountUp) {
   return parts.slice(0, 3).join(' ');
 }
 
-// Update trackers every second
-setInterval(() => {
-  updateAllTrackers();
-}, 1000);
+// Update trackers every second (only when page is visible and trackers exist)
+let trackerUpdateInterval = null;
+
+function startTrackerUpdates() {
+  // Stop any existing interval
+  if (trackerUpdateInterval) {
+    clearInterval(trackerUpdateInterval);
+  }
+  
+  // Only update if page is visible
+  if (document.hidden) {
+    return;
+  }
+  
+  // Check if there are any trackers to update
+  const trackersList = document.getElementById('trackersList');
+  if (!trackersList || trackersList.children.length === 0) {
+    return;
+  }
+  
+  trackerUpdateInterval = setInterval(() => {
+    // Only update if page is visible
+    if (!document.hidden) {
+      updateAllTrackers();
+    }
+  }, 1000);
+}
+
+// Start tracker updates initially
+startTrackerUpdates();
+
+// Pause updates when page is hidden, resume when visible
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    // Page is hidden - clear interval to save resources
+    if (trackerUpdateInterval) {
+      clearInterval(trackerUpdateInterval);
+      trackerUpdateInterval = null;
+    }
+  } else {
+    // Page is visible - restart updates
+    startTrackerUpdates();
+  }
+});
 
 // Todoist Integration
 function initializeTodoist() {
@@ -588,7 +893,8 @@ async function loadTodoistTasks() {
   const todoistContent = document.getElementById('todoistContent');
   
   chrome.storage.sync.get(['todoistApiKey'], async (result) => {
-    if (!result.todoistApiKey) {
+    // Handle Firefox case where result might be undefined
+    if (!result || !result.todoistApiKey) {
       todoistContent.innerHTML = '<div class="todoist-loading">Configure Todoist API key in settings</div>';
       return;
     }
@@ -623,6 +929,17 @@ async function loadTodoistTasks() {
         const taskDate = new Date(task.due.date);
         const taskDateStr = taskDate.toISOString().split('T')[0];
         return taskDateStr === today;
+      });
+      
+      // Ensure all tasks have URLs in the new format
+      todayTasks.forEach(task => {
+        // The Todoist API v2 should return task.url in the new format: https://app.todoist.com/app/task/{task-id}
+        // If url is missing or in old format, construct it using the new format
+        if (!task.url || !task.url.includes('/app/task/')) {
+          // Use the new URL format: https://app.todoist.com/app/task/{id}
+          // Note: The API should provide the correct URL, but this is a fallback
+          task.url = `https://app.todoist.com/app/task/${task.id}`;
+        }
       });
       
       displayTodoistTasks(todayTasks);
@@ -673,8 +990,8 @@ function createTodoistTaskElement(task) {
     div.classList.add('completed');
   }
   
-  // Use the URL provided by Todoist API (it's already in the correct format)
-  // The API returns: https://app.todoist.com/app/task/{id}
+  // Use the URL provided by Todoist API (should be in the new format)
+  // The API returns: https://app.todoist.com/app/task/{task-id} (new format)
   // Also create app URL scheme for desktop app: todoist://task?id={id}
   const todoistWebUrl = task.url || `https://app.todoist.com/app/task/${task.id}`;
   const todoistAppUrl = `todoist://task?id=${task.id}`;
@@ -739,7 +1056,8 @@ function formatTodoistDate(dateString) {
 
 async function toggleTodoistTask(taskId, completed) {
   chrome.storage.sync.get(['todoistApiKey'], async (result) => {
-    if (!result.todoistApiKey) return;
+    // Handle Firefox case where result might be undefined
+    if (!result || !result.todoistApiKey) return;
     
     try {
       const method = completed ? 'close' : 'reopen';
@@ -763,6 +1081,10 @@ async function toggleTodoistTask(taskId, completed) {
 // Links
 function loadLinks() {
   chrome.storage.sync.get(['links'], (result) => {
+    // Handle Firefox case where result might be undefined
+    if (!result) {
+      result = {};
+    }
     const links = result.links || [];
     const linksGrid = document.getElementById('linksGrid');
     linksGrid.innerHTML = '';
@@ -838,6 +1160,10 @@ function createLinkElement(link, index) {
 // Notes
 function loadNotes() {
   chrome.storage.sync.get(['notes'], (result) => {
+    // Handle Firefox case where result might be undefined
+    if (!result) {
+      result = {};
+    }
     const notes = result.notes || [];
     const notesList = document.getElementById('notesList');
     notesList.innerHTML = '';
