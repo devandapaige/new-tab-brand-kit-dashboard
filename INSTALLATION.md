@@ -42,7 +42,34 @@
    - Open a new tab
    - You should see the Brand Kit Dashboard
 
-**Note:** Firefox temporary add-ons are removed when you restart Firefox. For a permanent installation, you'll need to package the extension and install it properly, or use Firefox Developer Edition with permanent add-on installation.
+**Note:** Firefox temporary add-ons are removed when you restart Firefox or when Firefox updates. For a permanent installation, see the "Permanent Firefox Installation" section below.
+
+### Permanent Firefox Installation
+
+To prevent the extension from being removed after Firefox updates:
+
+#### Quick Method (Package as .xpi)
+
+1. **Package the extension:**
+   ```bash
+   chmod +x package-firefox.sh
+   ./package-firefox.sh
+   ```
+   This creates a `brand-kit-dashboard-firefox.xpi` file.
+
+2. **Install the .xpi:**
+   - Open Firefox and navigate to `about:debugging`
+   - Click "This Firefox" in the left sidebar
+   - Click "Load Temporary Add-on"
+   - Select the `brand-kit-dashboard-firefox.xpi` file
+
+**Note:** Even with .xpi, Firefox may still require reloading after major updates. For truly permanent installation:
+
+- **For Development:** Use Firefox Developer Edition and disable signature requirements
+- **For Distribution:** Submit to [Firefox Add-ons (AMO)](https://addons.mozilla.org/) for signing
+- **For Organizations:** Use Firefox Enterprise Policy for automatic installation
+
+See `FIREFOX_COMPATIBILITY.md` for detailed instructions on all permanent installation methods.
 
 ## Creating Icons
 

@@ -96,9 +96,62 @@ Before deploying to Firefox, test these features:
    cp manifest.chrome.json manifest.json
    ```
 
-**Note**: Temporary add-ons are removed when Firefox restarts. For permanent installation, you'll need to:
-- Package the extension as a `.xpi` file, OR
-- Submit to Firefox Add-ons (AMO) for distribution
+**Note**: Temporary add-ons are removed when Firefox restarts. For permanent installation, see the section below.
+
+### 4. Permanent Installation (Survives Firefox Updates)
+
+Temporary add-ons are removed when Firefox restarts or updates. To make your extension persist, you have several options:
+
+#### Option A: Package as .xpi (Recommended for Personal Use)
+
+1. **Package the extension:**
+   ```bash
+   chmod +x package-firefox.sh
+   ./package-firefox.sh
+   ```
+   This creates a `brand-kit-dashboard-firefox.xpi` file.
+
+2. **Install the .xpi:**
+   - Open Firefox and navigate to `about:debugging`
+   - Click "This Firefox" in the left sidebar
+   - Click "Load Temporary Add-on"
+   - Select the `brand-kit-dashboard-firefox.xpi` file
+   - The extension will be installed (though it may still show as "temporary" in the UI)
+
+**Note**: Even with .xpi, Firefox may still require reloading after major updates. For truly permanent installation, see Options B or C below.
+
+#### Option B: Firefox Developer Edition (Best for Development)
+
+Firefox Developer Edition allows permanent installation of unsigned extensions:
+
+1. Install [Firefox Developer Edition](https://www.mozilla.org/en-US/firefox/developer/)
+2. Navigate to `about:config`
+3. Set `xpinstall.signatures.required` to `false` (⚠️ Security risk - only for development)
+4. Load your extension normally - it will persist across restarts
+
+#### Option C: Submit to Firefox Add-ons (AMO) (Best for Distribution)
+
+For a truly permanent, signed extension:
+
+1. Create an account on [Firefox Add-ons](https://addons.mozilla.org/)
+2. Submit your extension for review
+3. Once approved and signed, it will persist across all Firefox updates
+4. Users can install it from AMO or you can distribute the signed .xpi
+
+#### Option D: Firefox Enterprise Policy (For Organizations)
+
+If you're deploying to a team/organization:
+
+1. Create a policies.json file (see [Firefox Enterprise Policy docs](https://github.com/mozilla/policy-templates))
+2. Configure automatic extension installation
+3. Deploy via group policy or configuration management
+
+### 5. Why Extensions Get Removed After Updates
+
+Firefox removes temporary add-ons after updates for security reasons. Even packaged .xpi files loaded via `about:debugging` are considered "temporary" and may be removed. The only truly permanent solutions are:
+- Signed extensions from AMO
+- Extensions installed via enterprise policy
+- Developer Edition with signature requirement disabled
 
 ### 4. Potential Issues to Watch For
 

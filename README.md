@@ -2,6 +2,8 @@
 
 A customizable new tab dashboard extension for Chrome and Firefox, designed for small businesses to create a branded bulletin board experience with reminders, favorite links, notes, and more.
 
+> **📌 Developer Mode Extension:** This extension must be installed in developer mode (Chrome) or via `about:debugging` (Firefox) since it's not published to browser stores. See the [Installation](#installation) section below for detailed instructions.
+
 ## Features
 
 ### Core Dashboard Features
@@ -39,15 +41,21 @@ A customizable new tab dashboard extension for Chrome and Firefox, designed for 
 
 ## Installation
 
+> **⚠️ Developer Mode Required:** This extension must be installed in developer mode since it's not published to browser stores. Developer mode allows you to load unpacked extensions directly from your local filesystem.
+
 ### Chrome
 
 1. Open Chrome and navigate to `chrome://extensions/`
-2. Enable "Developer mode" (toggle in top right)
+2. **Enable "Developer mode"** (toggle in the top right corner) - This is required to load unpacked extensions
 3. Click "Load unpacked"
 4. Select this project folder
 5. The extension will now replace your new tab page
 
+**Note:** Extensions loaded in developer mode will persist across browser restarts, but you'll see a developer mode warning banner. This is normal and safe for personal/development use.
+
 ### Firefox
+
+> **⚠️ Developer Mode Required:** Firefox uses `about:debugging` (Firefox's developer interface) to load unpacked extensions. Unlike Chrome, Firefox treats these as "temporary add-ons" which may be removed after browser updates.
 
 **Important:** Firefox looks for `manifest.json` in the root directory. You need to temporarily swap the manifest files before loading.
 
@@ -58,8 +66,8 @@ A customizable new tab dashboard extension for Chrome and Firefox, designed for 
    ./switch-to-firefox.sh
    ```
 
-2. **Load the extension:**
-   - Open Firefox and navigate to `about:debugging`
+2. **Load the extension in developer mode:**
+   - Open Firefox and navigate to `about:debugging` (Firefox's developer interface)
    - Click "This Firefox" in the left sidebar
    - Click "Load Temporary Add-on"
    - Select the `manifest.json` file (it's now the Firefox version)
@@ -89,7 +97,20 @@ A customizable new tab dashboard extension for Chrome and Firefox, designed for 
    cp manifest.chrome.json manifest.json
    ```
 
-**Note:** Temporary add-ons are removed when Firefox restarts. For permanent installation, package the extension as a `.xpi` file or submit to Firefox Add-ons (AMO).
+#### Permanent Firefox Installation
+
+**⚠️ Important:** Temporary add-ons loaded via `about:debugging` are removed when Firefox restarts or updates. For permanent installation, see **[PERMANENT_FIREFOX_INSTALL.md](PERMANENT_FIREFOX_INSTALL.md)** for detailed options:
+
+- **Firefox Developer Edition** (Recommended for personal use) - Allows permanent installation of unsigned extensions
+- **Package as .xpi** - Semi-permanent, may still need reloading after major updates
+- **Submit to Firefox Add-ons (AMO)** - Truly permanent, signed extension for distribution
+- **Enterprise Policy** - For organizational deployment
+
+Quick permanent install option:
+```bash
+./package-firefox.sh
+```
+Then install the `.xpi` file in Firefox Developer Edition (see `PERMANENT_FIREFOX_INSTALL.md` for full instructions).
 
 ## Configuration
 
@@ -310,10 +331,11 @@ brand-kit-dashboard/
 │   ├── icon48.png
 │   └── icon128.png
 ├── popup.html              # Extension popup (Quick Responses)
-├── README.md                 # This file
-├── INSTALLATION.md          # Detailed installation guide
-├── FIREFOX_COMPATIBILITY.md # Firefox compatibility guide
-└── KEYBOARD_SHORTCUTS.md    # Keyboard shortcuts reference
+├── README.md                      # This file
+├── INSTALLATION.md                 # Detailed installation guide
+├── FIREFOX_COMPATIBILITY.md        # Firefox compatibility guide
+├── PERMANENT_FIREFOX_INSTALL.md    # Guide for permanent Firefox installation
+└── KEYBOARD_SHORTCUTS.md          # Keyboard shortcuts reference
 ```
 
 ## Creating Icons
@@ -377,14 +399,34 @@ For deploying to a team:
 
 ## Development
 
+This extension runs in **developer mode**, which means:
+
+- ✅ You can edit code and see changes immediately
+- ✅ No need to repackage or reinstall for development
+- ✅ Full access to browser developer tools
+- ⚠️ Chrome shows a developer mode warning (normal and safe)
+- ⚠️ Firefox may remove temporary add-ons after updates (use Developer Edition for permanent dev install)
+
 ### Making Changes
 
-1. Edit the relevant files
-2. **For Chrome:** Go to `chrome://extensions/` and click the refresh icon on your extension
+1. Edit the relevant files in your code editor
+2. **For Chrome:** 
+   - Go to `chrome://extensions/`
+   - Find your extension and click the refresh icon (🔄)
+   - Changes will be applied immediately
 3. **For Firefox:** 
    - Make sure you've switched to Firefox manifest (`./switch-to-firefox.sh`)
-   - Reload the extension in `about:debugging`
+   - Go to `about:debugging` → "This Firefox"
+   - Find your extension and click "Reload"
    - After testing, restore Chrome manifest (`./switch-to-chrome.sh`)
+
+### Developer Mode Tips
+
+- **Chrome:** Keep Developer mode enabled in `chrome://extensions/` to maintain your extension
+- **Firefox:** Use Firefox Developer Edition with `xpinstall.signatures.required` set to `false` for permanent development installation
+- **Hot Reload:** Both browsers support reloading extensions without restarting the browser
+- **Debugging:** Use browser DevTools (F12) to debug extension code
+- **Console Logs:** Check the extension's service worker console (Chrome) or background page console (Firefox) for debugging
 
 ### Testing
 
